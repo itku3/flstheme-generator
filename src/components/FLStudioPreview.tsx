@@ -1,6 +1,9 @@
 import type { ThemeMapping } from "@/mapper";
 import { Badge } from "@/components/ui/badge";
 
+// C D# D D# E F F# G G# A A# B — false=흰건반, true=검은건반
+const BLACK_KEY = [false, true, false, true, false, false, true, false, true, false, true, false] as const;
+
 type FLStudioPreviewProps = {
   mapping: ThemeMapping;
 };
@@ -64,7 +67,7 @@ export function FLStudioPreview({ mapping }: FLStudioPreviewProps) {
                     key={index}
                     className="h-5 rounded-sm border border-white/10"
                     style={{
-                      backgroundColor: index % 5 === 0 ? preview.selected : "rgba(255,255,255,0.06)",
+                      backgroundColor: BLACK_KEY[index % 12] ? preview.selected : "rgba(255,255,255,0.06)",
                     }}
                   />
                 ))}
