@@ -1,0 +1,278 @@
+<h2>레이아웃 구조 — 어떤 흐름이 좋으신가요?</h2>
+<p class="subtitle">현재는 380px 고정 좌측 패널 + 우측 미리보기 2열 구조입니다</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border-radius:6px;padding:10px;font-family:sans-serif;border:1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;border-bottom:1px solid #e2e8f0;margin-bottom:8px;">
+          <div>
+            <div style="font-size:7px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">FL Studio .flstheme</div>
+            <div style="font-size:11px;font-weight:700;color:#0f172a;">Palette Theme Generator</div>
+          </div>
+          <div style="padding:4px 10px;background:#0f172a;color:#fff;font-size:8px;border-radius:5px;font-weight:600;">↓ Download</div>
+        </div>
+        <!-- Body: sidebar + main -->
+        <div style="display:grid;grid-template-columns:110px 1fr;gap:8px;">
+          <!-- Sidebar: narrower, scrollable presets -->
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:7px;">
+            <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Palette</div>
+            <!-- Preset pills -->
+            <div style="border:1.5px solid #6366f1;border-radius:4px;padding:4px 6px;margin-bottom:3px;background:#eef2ff;">
+              <div style="display:flex;gap:2px;margin-bottom:2px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#9A8CE5;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#DC778F;margin-left:-2px;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#FF1973;margin-left:-2px;"></div>
+              </div>
+              <div style="font-size:7px;color:#4f46e5;font-weight:600;">Grape Night</div>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 6px;margin-bottom:3px;">
+              <div style="display:flex;gap:2px;margin-bottom:2px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#7CC66A;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#E3C84E;margin-left:-2px;"></div>
+              </div>
+              <div style="font-size:7px;color:#94a3b8;">Oxide Lime</div>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 6px;margin-bottom:6px;">
+              <div style="display:flex;gap:2px;margin-bottom:2px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#38BDF8;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#A7F3D0;margin-left:-2px;"></div>
+              </div>
+              <div style="font-size:7px;color:#94a3b8;">Cold Signal</div>
+            </div>
+            <!-- Color inputs -->
+            <div style="border-top:1px solid #e2e8f0;padding-top:5px;">
+              <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Colors</div>
+              <div style="display:flex;align-items:center;gap:3px;margin-bottom:3px;">
+                <div style="width:9px;height:9px;border-radius:2px;background:#9A8CE5;border:1px solid #e2e8f0;flex-shrink:0;"></div>
+                <div style="flex:1;height:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:3px;margin-bottom:3px;">
+                <div style="width:9px;height:9px;border-radius:2px;background:#DC778F;border:1px solid #e2e8f0;flex-shrink:0;"></div>
+                <div style="flex:1;height:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:3px;">
+                <div style="width:9px;height:9px;border-radius:2px;background:#FF1973;border:1px solid #e2e8f0;flex-shrink:0;"></div>
+                <div style="flex:1;height:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Main: preview dominates -->
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:7px;">
+            <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Preview</div>
+            <div style="background:#121018;border-radius:4px;padding:8px;height:68px;">
+              <div style="display:grid;grid-template-columns:24px 1fr;gap:4px;height:100%;">
+                <div style="background:#1e1a30;border-radius:2px;padding:3px;display:flex;flex-direction:column;gap:2px;">
+                  <div style="height:3px;background:#9A8CE550;border-radius:1px;"></div>
+                  <div style="height:3px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="height:3px;background:#9A8CE550;border-radius:1px;"></div>
+                  <div style="height:3px;background:#9A8CE550;border-radius:1px;"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <div style="background:#1e1a30;border-radius:2px;padding:3px;flex:1;">
+                    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:1px;height:100%;">
+                      <div style="background:#9A8CE5;border-radius:1px;"></div>
+                      <div style="background:#DC778F;border-radius:1px;"></div>
+                      <div style="background:#FF197340;border-radius:1px;"></div>
+                      <div style="background:#9A8CE580;border-radius:1px;"></div>
+                      <div style="background:#DC778F60;border-radius:1px;"></div>
+                      <div style="background:#9A8CE540;border-radius:1px;"></div>
+                      <div style="background:#FF1973;border-radius:1px;"></div>
+                      <div style="background:#9A8CE5;border-radius:1px;"></div>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 20px;gap:2px;">
+                    <div style="background:#1e1a30;border-radius:2px;height:16px;"></div>
+                    <div style="background:#1e1a30;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;gap:1px;padding:2px;">
+                      <div style="width:3px;height:4px;background:#9A8CE5;border-radius:1px;"></div>
+                      <div style="width:3px;height:7px;background:#DC778F;border-radius:1px;"></div>
+                      <div style="width:3px;height:5px;background:#FF1973;border-radius:1px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — 사이드바 개선 (현재 구조 유지)</h3>
+      <p>기존 2열 구조를 유지하되 시각적 완성도만 높임. 팔레트 패널 좌측, 미리보기 우측 확장</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="stacked" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border-radius:6px;padding:10px;font-family:sans-serif;border:1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;border-bottom:1px solid #e2e8f0;margin-bottom:8px;">
+          <div>
+            <div style="font-size:7px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">FL Studio .flstheme</div>
+            <div style="font-size:11px;font-weight:700;color:#0f172a;">Palette Theme Generator</div>
+          </div>
+          <div style="padding:4px 10px;background:#0f172a;color:#fff;font-size:8px;border-radius:5px;font-weight:600;">↓ Download</div>
+        </div>
+        <!-- Top: palette (horizontal) -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:7px;margin-bottom:6px;">
+          <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Palette</div>
+          <div style="display:flex;gap:4px;margin-bottom:5px;">
+            <div style="border:1.5px solid #6366f1;border-radius:4px;padding:3px 6px;background:#eef2ff;display:flex;align-items:center;gap:3px;">
+              <div style="display:flex;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#9A8CE5;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#DC778F;margin-left:-2px;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#FF1973;margin-left:-2px;"></div>
+              </div>
+              <span style="font-size:7px;color:#4f46e5;font-weight:600;">Grape Night</span>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:3px 6px;display:flex;align-items:center;gap:3px;">
+              <div style="display:flex;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#7CC66A;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#E3C84E;margin-left:-2px;"></div>
+              </div>
+              <span style="font-size:7px;color:#94a3b8;">Oxide Lime</span>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:3px 6px;display:flex;align-items:center;gap:3px;">
+              <div style="display:flex;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#38BDF8;"></div>
+              </div>
+              <span style="font-size:7px;color:#94a3b8;">Cold Signal</span>
+            </div>
+          </div>
+          <!-- Horizontal color inputs -->
+          <div style="display:flex;gap:3px;">
+            <div style="display:flex;align-items:center;gap:2px;flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#9A8CE5;flex-shrink:0;"></div>
+              <div style="font-size:7px;color:#64748b;">#9A8CE5</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#DC778F;flex-shrink:0;"></div>
+              <div style="font-size:7px;color:#64748b;">#DC778F</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#FF1973;flex-shrink:0;"></div>
+              <div style="font-size:7px;color:#64748b;">#FF1973</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#F8FAFC;border:1px solid #e2e8f0;flex-shrink:0;"></div>
+              <div style="font-size:7px;color:#64748b;">#F8FAFC</div>
+            </div>
+          </div>
+        </div>
+        <!-- Bottom: full-width preview -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:7px;">
+          <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Preview — Full Width</div>
+          <div style="background:#121018;border-radius:4px;padding:6px;display:grid;grid-template-columns:20px 1fr;gap:3px;">
+            <div style="background:#1e1a30;border-radius:2px;padding:2px;display:flex;flex-direction:column;gap:1.5px;">
+              <div style="height:3px;background:#9A8CE550;border-radius:1px;"></div>
+              <div style="height:3px;background:#9A8CE5;border-radius:1px;"></div>
+              <div style="height:3px;background:#9A8CE550;border-radius:1px;"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <div style="background:#1e1a30;border-radius:2px;padding:2px;">
+                <div style="display:grid;grid-template-columns:repeat(16,1fr);gap:1px;">
+                  <div style="height:5px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="height:5px;background:#DC778F;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE540;border-radius:1px;"></div>
+                  <div style="height:5px;background:#FF1973;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE580;border-radius:1px;"></div>
+                  <div style="height:5px;background:#DC778F40;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="height:5px;background:#FF197360;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE540;border-radius:1px;"></div>
+                  <div style="height:5px;background:#DC778F;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="height:5px;background:#FF1973;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE540;border-radius:1px;"></div>
+                  <div style="height:5px;background:#DC778F60;border-radius:1px;"></div>
+                  <div style="height:5px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="height:5px;background:#FF197380;border-radius:1px;"></div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 30px;gap:2px;">
+                <div style="background:#1e1a30;border-radius:2px;height:12px;"></div>
+                <div style="background:#1e1a30;border-radius:2px;display:flex;align-items:flex-end;justify-content:space-around;padding:1px;">
+                  <div style="width:2px;height:4px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="width:2px;height:6px;background:#DC778F;border-radius:1px;"></div>
+                  <div style="width:2px;height:5px;background:#FF1973;border-radius:1px;"></div>
+                  <div style="width:2px;height:8px;background:#9A8CE5;border-radius:1px;"></div>
+                  <div style="width:2px;height:6px;background:#DC778F;border-radius:1px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 상하 분리 (팔레트 상단, 미리보기 하단)</h3>
+      <p>팔레트를 가로로 배치해 상단에 두고, 미리보기는 하단 전체 폭을 차지. 미리보기가 더 크고 잘 보임</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="wizard" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border-radius:6px;padding:10px;font-family:sans-serif;border:1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;border-bottom:1px solid #e2e8f0;margin-bottom:8px;">
+          <div>
+            <div style="font-size:7px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">FL Studio .flstheme</div>
+            <div style="font-size:11px;font-weight:700;color:#0f172a;">Palette Theme Generator</div>
+          </div>
+          <div></div>
+        </div>
+        <!-- Step tabs -->
+        <div style="display:flex;gap:0;margin-bottom:8px;border-bottom:2px solid #e2e8f0;">
+          <div style="padding:4px 10px;border-bottom:2px solid #6366f1;margin-bottom:-2px;font-size:8px;font-weight:600;color:#6366f1;">① Palette</div>
+          <div style="padding:4px 10px;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:8px;color:#94a3b8;">② Preview</div>
+          <div style="padding:4px 10px;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:8px;color:#94a3b8;">③ Export</div>
+        </div>
+        <!-- Step 1 content -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:8px;">
+          <div style="font-size:7px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Choose a preset or enter colors</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;">
+            <div style="border:1.5px solid #6366f1;border-radius:4px;padding:3px 6px;background:#eef2ff;display:flex;align-items:center;gap:3px;">
+              <div style="display:flex;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#9A8CE5;"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:#DC778F;margin-left:-2px;"></div>
+              </div>
+              <span style="font-size:7px;color:#4f46e5;font-weight:600;">Grape Night</span>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:3px 6px;display:flex;align-items:center;gap:3px;">
+              <div style="width:7px;height:7px;border-radius:50%;background:#7CC66A;"></div>
+              <span style="font-size:7px;color:#94a3b8;">Oxide Lime</span>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:4px;padding:3px 6px;display:flex;align-items:center;gap:3px;">
+              <div style="width:7px;height:7px;border-radius:50%;background:#38BDF8;"></div>
+              <span style="font-size:7px;color:#94a3b8;">Cold Signal</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:2px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#9A8CE5;flex-shrink:0;"></div>
+              <span style="font-size:7px;color:#64748b;">#9A8CE5</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#DC778F;flex-shrink:0;"></div>
+              <span style="font-size:7px;color:#64748b;">#DC778F</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:2px 4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#FF1973;flex-shrink:0;"></div>
+              <span style="font-size:7px;color:#64748b;">#FF1973</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;">
+            <div style="padding:4px 10px;background:#0f172a;color:#fff;font-size:8px;border-radius:5px;font-weight:600;">Next: Preview →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — 단계형 마법사 (탭 스텝)</h3>
+      <p>① 팔레트 → ② 미리보기 → ③ 내보내기 순서로 진행. 한 번에 하나씩 집중, 단순한 흐름</p>
+    </div>
+  </div>
+
+</div>

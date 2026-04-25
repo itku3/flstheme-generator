@@ -1,0 +1,30 @@
+# 컨텍스트 스냅샷: FL Studio 테마 팔레트 생성 서비스
+
+- 작업 설명: 사용자가 색상 또는 팔레트를 선택하면 FL Studio `.flstheme` 파일을 다운로드할 수 있는 웹서비스 요구사항을 명확히 한다.
+- 원하는 결과: 이후 계획/구현 단계에서 바로 사용할 수 있는 한국어 실행 스펙.
+- 사용자가 제안한 해결책: 웹사이트에서 팔레트를 고르면 저장된 팔레트에 맞게 `.flstheme` 테마 파일을 생성하고 다운로드한다.
+- 의도 가설: 사용자가 직접 쓸 수 있고, 이후 FL Studio 유저들이 쉽게 테마를 제작하고 공유할 수 있는 기반 도구를 만들고 싶어 한다.
+- 확인된 사실과 증거:
+  - 샘플 파일: `/mnt/c/Users/sonju/Documents/Image-Line/FL Studio/Settings/Themes/Grape.flstheme`
+  - 파일은 CRLF 줄바꿈을 사용하는 ASCII 텍스트이며 `Key=Value` 구조다.
+  - 파일 크기는 879 bytes였다.
+  - 색상 필드로 보이는 값은 `Selected`, `Highlight`, `Mute`, `Option`, `StepEven`, `StepOdd`, `TextColor`, `Meter0`~`Meter5`, `NoteColor0`~`NoteColor15`, 그리드 배경 필드, `BackColor` 등이 있다.
+  - 색상 값은 signed 24-bit RGB 정수로 보인다. 예: `Selected=-6648603`은 `#9A8CE5`로 변환된다.
+  - `Hue`, `Saturation`, `Lightness`, `Contrast`, `Text`는 개별 RGB 색상이 아니라 전역 조정값으로 보인다.
+- 제약:
+  - `.flstheme`는 공개적으로 안정화된 표준 포맷인지 확인되지 않았다.
+  - FL Studio 버전 호환성 테스트가 필요하다.
+  - MVP는 검증된 템플릿의 전역 조정 필드를 유지하는 방식이 안전해 보인다.
+  - deep-interview 모드 안에서는 구현하지 않는다.
+  - 인터뷰로 작성하는 문서는 모두 한국어로 작성한다.
+- 미해결 질문:
+  - 실제 FL Studio에서 생성 파일을 검증할 대상 버전.
+  - 사용할 기본 템플릿 파일의 최종 확정 여부.
+  - 이후 공유 기능을 어떤 단계에서 추가할지.
+- 결정 경계:
+  - 자동 색상 매핑 규칙은 구현자가 합리적으로 정할 수 있다.
+  - 텍스트 대비 보정, 강조색 배치, Meter/Step/NoteColor 파생 규칙도 구현자가 정할 수 있다.
+  - MVP에서는 FL Studio를 완전히 재현하는 실시간 미리보기 대신 이미지 중심 미리보기를 사용해도 된다.
+- 예상 코드베이스 접점:
+  - 현재 저장소는 앱 코드가 없는 아이디어/리서치 저장소에 가깝다.
+  - 이후 구현 시 프론트엔드 앱, `.flstheme` 생성 로직, 미리보기 생성 로직, 다운로드 로직이 필요하다.
