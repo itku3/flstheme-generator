@@ -1,7 +1,7 @@
 import type { ThemeMapping } from "@/mapper";
 import { Badge } from "@/components/ui/badge";
 
-// C D# D D# E F F# G G# A A# B — false=흰건반, true=검은건반
+// C C# D D# E F F# G G# A A# B — false=흰건반, true=검은건반
 const BLACK_KEY = [false, true, false, true, false, false, true, false, true, false, true, false] as const;
 
 type FLStudioPreviewProps = {
