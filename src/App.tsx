@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FLStudioPreview } from "@/components/FLStudioPreview";
 import { downloadTextFile, safeThemeFilename } from "@/download";
-import { generatePaletteFromColor, normalizeHex } from "@/color";
+import { adjustHex, generatePaletteFromColor, hexToRgb, normalizeHex, rgbToHsl } from "@/color";
 import { mapPaletteToTheme, PRESET_PALETTES } from "@/mapper";
 import type { ThemeMapping } from "@/mapper";
 import { generateTheme } from "@/themeFormat";
@@ -69,6 +69,37 @@ function safeSwatch(color: string): string {
   }
 }
 
+function applyAdjToHex(hex: string, adj: Adjustments): string {
+  try {
+    const hsl = rgbToHsl(hexToRgb(hex));
+    return adjustHex(hex, {
+      h: ((hsl.h + adj.hue * (360 / 127)) % 360 + 360) % 360,
+      s: Math.min(1, Math.max(0, hsl.s * (adj.saturation / 256))),
+      l: Math.min(1, Math.max(0, hsl.l + (adj.lightness - 128) / 255)),
+    });
+  } catch {
+    return hex;
+  }
+}
+
+function applyAdjToPreview(
+  preview: ThemeMapping["preview"],
+  adj: Adjustments,
+): ThemeMapping["preview"] {
+  const a = (c: string) => applyAdjToHex(c, adj);
+  return {
+    ...preview,
+    background: a(preview.background),
+    panel:      a(preview.panel),
+    selected:   a(preview.selected),
+    highlight:  a(preview.highlight),
+    text:       a(preview.text),
+    muted:      a(preview.muted),
+    notes:      preview.notes.map(a),
+    meters:     preview.meters.map(a),
+  };
+}
+
 function isValidHex(value: string): boolean {
   return /^#?[0-9a-fA-F]{6}$/.test(value.trim());
 }
@@ -106,7 +137,11 @@ export function App() {
         Text: adjustments.text,
       };
       const themeText = generateTheme(grapeTemplate, finalPatch);
-      return { status: "ready", mapping, themeText };
+      const adjustedMapping = {
+        ...mapping,
+        preview: applyAdjToPreview(mapping.preview, adjustments),
+      };
+      return { status: "ready", mapping: adjustedMapping, themeText };
     } catch (error) {
       return {
         status: "error",
