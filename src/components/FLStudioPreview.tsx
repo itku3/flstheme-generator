@@ -4,6 +4,13 @@ import { Badge } from "@/components/ui/badge";
 // C C# D D# E F F# G G# A A# B — false=흰건반, true=검은건반
 const BLACK_KEY = [false, true, false, true, false, false, true, false, true, false, true, false] as const;
 
+const PLAYLIST_TRACKS = [
+  { name: "Kick",   active: new Set([0,1,2,3,4,5,6,7]),    noteIdx: 0  },
+  { name: "Bass",   active: new Set([0,2,4,6,8,10,12,14]), noteIdx: 4  },
+  { name: "Lead",   active: new Set([4,5,6,7,12,13,14,15]),noteIdx: 8  },
+  { name: "Pad",    active: new Set([0,1,2,3,8,9,10,11]),  noteIdx: 12 },
+];
+
 type FLStudioPreviewProps = {
   mapping: ThemeMapping;
 };
@@ -82,6 +89,30 @@ export function FLStudioPreview({ mapping }: FLStudioPreviewProps) {
                   style={{ backgroundColor: meter, height: `${24 + index * 12}px` }}
                   title={`Meter ${index}`}
                 />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-md p-3" style={{ backgroundColor: preview.panel }}>
+            <div className="mb-2 text-xs font-semibold uppercase">Playlist</div>
+            <div className="flex flex-col gap-1">
+              {PLAYLIST_TRACKS.map((track) => (
+                <div key={track.name} className="flex items-center gap-2">
+                  <span className="w-8 shrink-0 text-[10px] opacity-60">{track.name}</span>
+                  <div className="flex-1 grid grid-cols-[repeat(16,minmax(0,1fr))] gap-px h-4">
+                    {Array.from({ length: 16 }, (_, col) => (
+                      <div
+                        key={col}
+                        className="rounded-sm"
+                        style={{
+                          backgroundColor: track.active.has(col)
+                            ? preview.notes[track.noteIdx]
+                            : "rgba(255,255,255,0.04)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </section>
