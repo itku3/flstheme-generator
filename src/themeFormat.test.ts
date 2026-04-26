@@ -79,7 +79,7 @@ describe("theme format", () => {
     });
 
     expect(generated).toContain("Hue=0\r\n");
-    expect(generated).toContain("Lightmode=0\r\n");
+    expect(generated).toContain("Lightmode=1\r\n");
     expect(generated).toContain("OverrideClips=1\r\n");
     expect(generated).toContain("PRGridCustom=1\r\n");
     expect(generated).toContain("PLGridCustom=1\r\n");

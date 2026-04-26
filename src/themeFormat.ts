@@ -4,7 +4,6 @@ export const PATCHABLE_THEME_KEYS = [
   "Lightness",
   "Contrast",
   "Text",
-  "Lightmode",
   "Selected",
   "Highlight",
   "Mute",
@@ -44,6 +43,7 @@ export const PATCHABLE_THEME_KEYS = [
 ] as const;
 
 export const PROTECTED_THEME_KEYS = [
+  "Lightmode",
   "OverrideClips",
   "PRGridContrast",
   "PLGridContrast",
