@@ -73,9 +73,12 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
     s: Math.min(selectedHsl.s * 0.25, 0.20),
     l: 0.88,
   });
+  // FL Studio Lightmode=1 base hue ≈ 125° (lime). Rotating toward the palette's
+  // background hue prevents the lime base from bleeding through as olive/brown.
+  const autoHue = Math.max(-127, Math.min(127, Math.round(-(bgHsl.h - 125) * 127 / 360)));
 
   const patch: ThemePatch = {
-    Hue: 0,
+    Hue: autoHue,
     OverrideClips: 0,
     BackMode: 0,
     BackColor: hexToFlColor(background),

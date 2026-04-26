@@ -78,7 +78,7 @@ describe("theme format", () => {
       }
     });
 
-    expect(generated).toContain("Hue=0\r\n");
+    expect(generated).toMatch(/(?:^|\r\n)Hue=-?\d+\r\n/);
     expect(generated).toContain("Lightmode=1\r\n");
     expect(generated).toContain("OverrideClips=0\r\n");
     expect(generated).toContain("PRGridCustom=1\r\n");

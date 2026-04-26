@@ -38,7 +38,7 @@ const DEFAULT_ADJUSTMENTS: Adjustments = {
 };
 
 const ADJUSTMENT_CONFIGS = [
-  { key: "hue",        label: "Hue",         min: -127, max: 127, step: 1 },
+  { key: "hue",        label: "Hue offset",  min: -127, max: 127, step: 1 },
   { key: "saturation", label: "Saturation",  min: 0,    max: 512, step: 1 },
   { key: "lightness",  label: "Lightness",   min: 0,    max: 255, step: 1 },
   { key: "contrast",   label: "Contrast",    min: 0,    max: 127, step: 1 },
@@ -129,9 +129,11 @@ export function App() {
         };
       }
       const mapping = mapPaletteToTheme(normalized);
+      const autoHue = mapping.patch.Hue ?? 0;
+      const totalHue = Math.max(-127, Math.min(127, autoHue + adjustments.hue));
       const finalPatch = {
         ...mapping.patch,
-        Hue: adjustments.hue,
+        Hue: totalHue,
         Saturation: adjustments.saturation,
         Lightness: adjustments.lightness,
         Contrast: adjustments.contrast,
