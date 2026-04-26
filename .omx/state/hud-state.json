@@ -1,6 +1,0 @@
-{
-  "last_turn_at": "2026-04-22T19:33:14.461Z",
-  "turn_count": 16,
-  "last_progress_at": "2026-04-22T19:33:14.461Z",
-  "last_agent_output": "좋습니다. 수동 검증은 나중에 하면 됩니다.\n\ndev server는 지금 정리해뒀습니다. 자고 나서 다시 확인할 때는 프로젝트 폴더에서:\n\n```bash\nnpm run dev\n``"
-}

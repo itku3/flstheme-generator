@@ -1,1 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# AI / dev tool artifacts
+.claude/
+.omx/
+.superpowers/
+.codex
 .worktrees/
+docs/superpowers/
+
+# Vite cache
+*.local
+vite.config.ts.timestamp*
+
+# Test coverage
+coverage/
