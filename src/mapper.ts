@@ -53,7 +53,8 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const palette = normalizePalette(rawPalette);
   const sortedByLight = [...palette].sort((a, b) => relativeLuminance(a) - relativeLuminance(b));
   const background = sortedByLight[0];
-  const panel = adjustHex(background, { l: Math.min(0.28, rgbToHsl(hexToRgb(background)).l + 0.08) });
+  const bgHsl = rgbToHsl(hexToRgb(background));
+  const panel = adjustHex(background, { l: Math.min(0.28, bgHsl.l + 0.08) });
   const text = readableTextColor(background);
   const accentCandidates = [...palette].sort((a, b) => scoreAccent(b, background) - scoreAccent(a, background));
   const selected = accentCandidates[0];
@@ -65,8 +66,14 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const meters = buildMeterColors(background, highlight);
   const notes = buildNoteColors(palette);
 
+  // FL Studio Lightmode=1 base hue is approximately 125° (lime).
+  // Rotating it toward the palette's background hue makes all non-individually-specified
+  // UI elements (browser panel, scrollbars, etc.) match the palette's color family.
+  // Reference: Grape Night bg H≈255° → template Hue=-49  ≈ -(255-125)×127/360 = -45.8
+  const hue = Math.max(-127, Math.min(127, Math.round(-(bgHsl.h - 125) * 127 / 360)));
+
   const patch: ThemePatch = {
-    Hue: 0,
+    Hue: hue,
     BackColor: hexToFlColor(background),
     PRGridback: hexToFlColor(stepOdd),
     PRGridCustom: 1,

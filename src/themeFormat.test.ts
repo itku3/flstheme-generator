@@ -78,7 +78,8 @@ describe("theme format", () => {
       }
     });
 
-    expect(generated).toContain("Hue=0\r\n");
+    // Hue is derived from the palette background, not hardcoded to 0
+    expect(generated).toMatch(/(?:^|\r\n)Hue=-?\d+\r\n/);
     expect(generated).toContain("Lightmode=1\r\n");
     expect(generated).toContain("OverrideClips=1\r\n");
     expect(generated).toContain("PRGridCustom=1\r\n");
