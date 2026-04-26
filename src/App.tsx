@@ -38,7 +38,7 @@ const DEFAULT_ADJUSTMENTS: Adjustments = {
 };
 
 const ADJUSTMENT_CONFIGS = [
-  { key: "hue",        label: "Hue offset",  min: -127, max: 127, step: 1 },
+  { key: "hue",        label: "Hue",         min: -127, max: 127, step: 1 },
   { key: "saturation", label: "Saturation",  min: 0,    max: 512, step: 1 },
   { key: "lightness",  label: "Lightness",   min: 0,    max: 255, step: 1 },
   { key: "contrast",   label: "Contrast",    min: 0,    max: 127, step: 1 },
@@ -128,22 +128,18 @@ export function App() {
         };
       }
       const mapping = mapPaletteToTheme(normalized);
-      // Hue: mapper computes a palette-appropriate base; slider adds a relative offset
-      const baseHue = mapping.patch.Hue ?? 0;
-      const totalHue = Math.max(-127, Math.min(127, baseHue + adjustments.hue));
       const finalPatch = {
         ...mapping.patch,
-        Hue: totalHue,
+        Hue: adjustments.hue,
         Saturation: adjustments.saturation,
         Lightness: adjustments.lightness,
         Contrast: adjustments.contrast,
         Text: adjustments.text,
       };
       const themeText = generateTheme(grapeTemplate, finalPatch);
-      const previewAdj = { ...adjustments, hue: totalHue };
       const adjustedMapping = {
         ...mapping,
-        preview: applyAdjToPreview(mapping.preview, previewAdj),
+        preview: applyAdjToPreview(mapping.preview, adjustments),
       };
       return { status: "ready", mapping: adjustedMapping, themeText };
     } catch (error) {

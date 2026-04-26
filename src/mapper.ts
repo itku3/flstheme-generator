@@ -65,20 +65,18 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const stepOdd = adjustHex(panel, { l: 0.16 });
   const meters = buildMeterColors(background, highlight);
   const notes = buildNoteColors(palette);
-
-  // FL Studio Lightmode=1 base hue is approximately 125° (lime).
-  // Rotating it toward the palette's background hue makes all non-individually-specified
-  // UI elements (browser panel, scrollbars, etc.) match the palette's color family.
-  // Reference: Grape Night bg H≈255° → template Hue=-49  ≈ -(255-125)×127/360 = -45.8
-  const hue = Math.max(-127, Math.min(127, Math.round(-(bgHsl.h - 125) * 127 / 360)));
+  const selectedHsl = rgbToHsl(hexToRgb(selected));
+  const plGrid = adjustHex(selected, {
+    l: Math.max(0.28, Math.min(selectedHsl.l * 0.65, 0.42)),
+  });
 
   const patch: ThemePatch = {
-    Hue: hue,
+    Hue: 0,
     OverrideClips: 0,
     BackColor: hexToFlColor(background),
     PRGridback: hexToFlColor(stepOdd),
     PRGridCustom: 1,
-    PLGridback: hexToFlColor(stepEven),
+    PLGridback: hexToFlColor(plGrid),
     PLGridCustom: 1,
     EEGridback: hexToFlColor(stepOdd),
     EEGridCustom: 1,
