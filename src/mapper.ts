@@ -57,13 +57,15 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const bgHsl = rgbToHsl(hexToRgb(background));
   const panel = adjustHex(background, { l: Math.min(0.28, bgHsl.l + 0.08) });
   const text = readableTextColor(background);
-  const accentCandidates = [...palette].sort((a, b) => scoreAccent(b, background) - scoreAccent(a, background));
-  const selected = accentCandidates[0];
+  const accentCandidates = [...palette]
+    .filter((c) => scoreAccent(c, background) > 0)
+    .sort((a, b) => scoreAccent(b, background) - scoreAccent(a, background));
+  const selected = accentCandidates[0] ?? palette[0];
   const highlight = accentCandidates[1] ?? selected;
   const mute = accentCandidates[2] ?? highlight;
   const option = accentCandidates[3] ?? selected;
-  const stepEven = adjustHex(panel, { l: 0.22 });
-  const stepOdd = adjustHex(panel, { l: 0.16 });
+  const stepEven = adjustHex(panel, { l: 0.28 });
+  const stepOdd = adjustHex(panel, { l: 0.20 });
   const meters = buildMeterColors(background, highlight);
   const notes = buildNoteColors(palette);
   const selectedHsl = rgbToHsl(hexToRgb(selected));
@@ -129,9 +131,9 @@ export function normalizePalette(rawPalette: string[]): string[] {
 
 function scoreAccent(hex: string, background: string): number {
   const hsl = rgbToHsl(hexToRgb(hex));
-  // Near-neutral colors (very low saturation) are poor accent choices — score them last
   if (hsl.s < 0.15) return 0;
-  // Cap contrast contribution so saturated colors can compete with high-contrast neutrals
+  // Near-white or near-black colors make poor accents regardless of saturation
+  if (hsl.l > 0.85 || hsl.l < 0.15) return 0;
   return hsl.s * 4 + Math.min(contrastRatio(hex, background), 8) + hsl.l;
 }
 
