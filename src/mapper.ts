@@ -68,7 +68,8 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const notes = buildNoteColors(palette);
   const selectedHsl = rgbToHsl(hexToRgb(selected));
   const plGrid = adjustHex(selected, {
-    l: Math.max(0.28, Math.min(selectedHsl.l * 0.65, 0.42)),
+    s: Math.min(selectedHsl.s * 0.25, 0.20),
+    l: 0.88,
   });
 
   const patch: ThemePatch = {
