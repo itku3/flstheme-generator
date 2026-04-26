@@ -45,7 +45,7 @@ describe("theme format", () => {
 
   it("rejects non-whitelisted patch requests", () => {
     const parsed = parseThemeLines(fixture);
-    const invalidPatch = { BackMode: 0 } as unknown as ThemePatch;
+    const invalidPatch = { BackPicFilename: 0 } as unknown as ThemePatch;
     expect(() => patchThemeTokens(parsed, invalidPatch)).toThrow("Cannot patch non-whitelisted key");
   });
 

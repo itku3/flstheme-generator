@@ -77,6 +77,7 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const patch: ThemePatch = {
     Hue: 0,
     OverrideClips: 0,
+    BackMode: 0,
     BackColor: hexToFlColor(background),
     PRGridback: hexToFlColor(stepOdd),
     PRGridCustom: 1,
