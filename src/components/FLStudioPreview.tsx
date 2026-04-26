@@ -93,7 +93,7 @@ export function FLStudioPreview({ mapping }: FLStudioPreviewProps) {
             </div>
           </section>
 
-          <section className="rounded-md p-3" style={{ backgroundColor: preview.panel }}>
+          <section className="rounded-md p-3" style={{ backgroundColor: preview.plGrid }}>
             <div className="mb-2 text-xs font-semibold uppercase">Playlist</div>
             <div className="flex flex-col gap-1">
               {PLAYLIST_TRACKS.map((track) => (

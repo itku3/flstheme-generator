@@ -91,6 +91,7 @@ function applyAdjToPreview(
     ...preview,
     background: a(preview.background),
     panel:      a(preview.panel),
+    plGrid:     a(preview.plGrid),
     selected:   a(preview.selected),
     highlight:  a(preview.highlight),
     text:       a(preview.text),

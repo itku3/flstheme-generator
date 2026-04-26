@@ -21,6 +21,7 @@ export type ThemeMapping = {
   preview: {
     background: string;
     panel: string;
+    plGrid: string;
     selected: string;
     highlight: string;
     text: string;
@@ -104,6 +105,7 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
     preview: {
       background,
       panel,
+      plGrid,
       selected,
       highlight,
       text,
