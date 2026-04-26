@@ -66,6 +66,7 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
   const notes = buildNoteColors(palette);
 
   const patch: ThemePatch = {
+    Hue: 0,
     BackColor: hexToFlColor(background),
     PRGridback: hexToFlColor(stepOdd),
     PLGridback: hexToFlColor(stepEven),
@@ -116,7 +117,10 @@ export function normalizePalette(rawPalette: string[]): string[] {
 
 function scoreAccent(hex: string, background: string): number {
   const hsl = rgbToHsl(hexToRgb(hex));
-  return hsl.s * 2 + contrastRatio(hex, background) + hsl.l;
+  // Near-neutral colors (very low saturation) are poor accent choices — score them last
+  if (hsl.s < 0.15) return 0;
+  // Cap contrast contribution so saturated colors can compete with high-contrast neutrals
+  return hsl.s * 4 + Math.min(contrastRatio(hex, background), 8) + hsl.l;
 }
 
 function buildMeterColors(background: string, accent: string): string[] {

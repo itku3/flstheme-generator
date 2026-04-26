@@ -1,4 +1,5 @@
 export const PATCHABLE_THEME_KEYS = [
+  "Hue",
   "Selected",
   "Highlight",
   "Mute",
@@ -35,7 +36,6 @@ export const PATCHABLE_THEME_KEYS = [
 ] as const;
 
 export const PROTECTED_THEME_KEYS = [
-  "Hue",
   "Saturation",
   "Lightness",
   "Contrast",

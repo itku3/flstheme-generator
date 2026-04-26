@@ -45,7 +45,7 @@ describe("theme format", () => {
 
   it("rejects non-whitelisted patch requests", () => {
     const parsed = parseThemeLines(fixture);
-    const invalidPatch = { Hue: 12 } as unknown as ThemePatch;
+    const invalidPatch = { Saturation: 128 } as unknown as ThemePatch;
     expect(() => patchThemeTokens(parsed, invalidPatch)).toThrow("Cannot patch non-whitelisted key");
   });
 
@@ -78,7 +78,7 @@ describe("theme format", () => {
       }
     });
 
-    expect(generated).toContain("Hue=-49\r\n");
+    expect(generated).toContain("Hue=0\r\n");
     expect(generated).toContain("Saturation=256\r\n");
     expect(generated).toContain("Lightness=118\r\n");
     expect(generated).toContain("Contrast=64\r\n");
