@@ -149,35 +149,34 @@ export function adjustHex(hex: string, adjustments: Partial<Hsl>): string {
 export function generatePaletteFromColor(baseHex: string): string[] {
   const hsl = rgbToHsl(hexToRgb(normalizeHex(baseHex)));
 
-  // 같은 색조 계열 유지 — 최대 ±12° 이내에서만 변주
   const background = adjustHex(baseHex, {
-    s: Math.min(hsl.s * 0.25, 0.22),
+    s: Math.min(hsl.s * 0.3, 0.25),
     l: 0.07,
   });
 
   const accent = adjustHex(baseHex, {
-    s: Math.max(hsl.s, 0.55),
-    l: Math.min(Math.max(hsl.l, 0.50), 0.63),
+    s: Math.max(hsl.s, 0.5),
+    l: Math.min(Math.max(hsl.l, 0.50), 0.65),
   });
 
   const secondary = adjustHex(baseHex, {
-    h: (hsl.h + 12) % 360,
-    s: Math.min(hsl.s * 0.80, 0.65),
+    h: (hsl.h + 30) % 360,
+    s: Math.min(hsl.s * 0.9, 0.75),
     l: 0.55,
   });
 
-  const bright = adjustHex(baseHex, {
-    h: ((hsl.h - 8) + 360) % 360,
-    s: Math.min(hsl.s * 0.55, 0.50),
-    l: 0.75,
+  const complementary = adjustHex(baseHex, {
+    h: (hsl.h + 160) % 360,
+    s: Math.min(hsl.s * 0.8, 0.70),
+    l: 0.58,
   });
 
   const text = adjustHex(baseHex, {
-    s: Math.min(hsl.s * 0.08, 0.06),
+    s: Math.min(hsl.s * 0.12, 0.08),
     l: 0.93,
   });
 
-  return [background, accent, secondary, bright, text];
+  return [background, accent, secondary, complementary, text];
 }
 
 export function clamp(value: number, min: number, max: number): number {
