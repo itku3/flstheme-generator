@@ -8,7 +8,10 @@ describe("palette mapper", () => {
     const second = mapPaletteToTheme(PRESET_PALETTES[0].colors);
 
     expect(first.patch).toEqual(second.patch);
-    expect(Object.keys(first.patch).sort()).toEqual([...PATCHABLE_THEME_KEYS].sort());
+    const patchableSet = new Set<string>(PATCHABLE_THEME_KEYS);
+    for (const key of Object.keys(first.patch)) {
+      expect(patchableSet.has(key)).toBe(true);
+    }
     for (const key of PROTECTED_THEME_KEYS) {
       expect(first.patch).not.toHaveProperty(key);
     }

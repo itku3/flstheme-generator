@@ -1,5 +1,9 @@
 export const PATCHABLE_THEME_KEYS = [
   "Hue",
+  "Saturation",
+  "Lightness",
+  "Contrast",
+  "Text",
   "Selected",
   "Highlight",
   "Mute",
@@ -36,10 +40,6 @@ export const PATCHABLE_THEME_KEYS = [
 ] as const;
 
 export const PROTECTED_THEME_KEYS = [
-  "Saturation",
-  "Lightness",
-  "Contrast",
-  "Text",
   "Lightmode",
   "OverrideClips",
   "PRGridCustom",

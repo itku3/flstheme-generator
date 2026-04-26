@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Download, FileText, Moon, Sun } from "lucide-react";
+import { AlertCircle, Download, FileText, Moon, RotateCcw, Sun, Wand2 } from "lucide-react";
 import grapeTemplate from "./fixtures/templates/Grape.flstheme?raw";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
@@ -13,12 +14,36 @@ import {
 } from "@/components/ui/tooltip";
 import { FLStudioPreview } from "@/components/FLStudioPreview";
 import { downloadTextFile, safeThemeFilename } from "@/download";
-import { normalizeHex } from "@/color";
+import { generatePaletteFromColor, normalizeHex } from "@/color";
 import { mapPaletteToTheme, PRESET_PALETTES } from "@/mapper";
 import type { ThemeMapping } from "@/mapper";
 import { generateTheme } from "@/themeFormat";
 
 const EMPTY_COLOR = "";
+
+type Adjustments = {
+  hue: number;
+  saturation: number;
+  lightness: number;
+  contrast: number;
+  text: number;
+};
+
+const DEFAULT_ADJUSTMENTS: Adjustments = {
+  hue: 0,
+  saturation: 256,
+  lightness: 118,
+  contrast: 64,
+  text: -191,
+};
+
+const ADJUSTMENT_CONFIGS = [
+  { key: "hue",        label: "Hue",        min: -127, max: 127, step: 1 },
+  { key: "saturation", label: "Saturation",  min: 0,    max: 512, step: 1 },
+  { key: "lightness",  label: "Lightness",   min: 0,    max: 255, step: 1 },
+  { key: "contrast",   label: "Contrast",    min: 0,    max: 127, step: 1 },
+  { key: "text",       label: "Text",        min: -255, max: 255, step: 1 },
+] as const;
 
 type PaletteResult =
   | { status: "ready"; mapping: ThemeMapping; themeText: string }
@@ -44,12 +69,18 @@ function safeSwatch(color: string): string {
   }
 }
 
+function isValidHex(value: string): boolean {
+  return /^#?[0-9a-fA-F]{6}$/.test(value.trim());
+}
+
 const STEPS = ["팔레트 선택", "미리보기", "내보내기"] as const;
 
 export function App() {
   const [isDark, setIsDark] = useState(getSystemDark);
   const [selectedPreset, setSelectedPreset] = useState(PRESET_PALETTES[0].id);
   const [colors, setColors] = useState(() => padPalette(PRESET_PALETTES[0].colors));
+  const [adjustments, setAdjustments] = useState<Adjustments>(DEFAULT_ADJUSTMENTS);
+  const [baseColor, setBaseColor] = useState("");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -66,7 +97,15 @@ export function App() {
         };
       }
       const mapping = mapPaletteToTheme(normalized);
-      const themeText = generateTheme(grapeTemplate, mapping.patch);
+      const finalPatch = {
+        ...mapping.patch,
+        Hue: adjustments.hue,
+        Saturation: adjustments.saturation,
+        Lightness: adjustments.lightness,
+        Contrast: adjustments.contrast,
+        Text: adjustments.text,
+      };
+      const themeText = generateTheme(grapeTemplate, finalPatch);
       return { status: "ready", mapping, themeText };
     } catch (error) {
       return {
@@ -77,7 +116,7 @@ export function App() {
             : "팔레트를 해석할 수 없습니다.",
       };
     }
-  }, [colors]);
+  }, [colors, adjustments]);
 
   const isReady = paletteResult.status === "ready";
   const currentStep = isReady ? 2 : 1;
@@ -94,6 +133,13 @@ export function App() {
     setColors((current) =>
       current.map((c, i) => (i === index ? value : c)),
     );
+  };
+
+  const handleGenerateFromColor = () => {
+    if (!isValidHex(baseColor)) return;
+    const generated = generatePaletteFromColor(baseColor);
+    setSelectedPreset("custom");
+    setColors(padPalette(generated));
   };
 
   const downloadTheme = () => {
@@ -195,6 +241,47 @@ export function App() {
 
           {/* Palette section */}
           <section className="rounded-xl border bg-card p-4 flex flex-col gap-4">
+
+            {/* Single color auto-generate */}
+            <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-border/50">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                단색으로 자동 생성
+              </span>
+              <div className="flex items-center gap-2">
+                <div
+                  className="relative h-7 w-7 shrink-0 cursor-pointer rounded-md border border-border"
+                  style={{ backgroundColor: safeSwatch(baseColor) }}
+                  onClick={() => document.getElementById("base-color-picker")?.click()}
+                  aria-hidden="true"
+                />
+                <input
+                  id="base-color-picker"
+                  type="color"
+                  className="sr-only"
+                  value={isValidHex(baseColor) ? normalizeHex(baseColor) : "#000000"}
+                  onChange={(e) => setBaseColor(e.target.value)}
+                  tabIndex={-1}
+                />
+                <input
+                  type="text"
+                  value={baseColor}
+                  onChange={(e) => setBaseColor(e.target.value)}
+                  placeholder="#89CFF0"
+                  aria-label="기준 색상"
+                  className="w-24 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleGenerateFromColor}
+                disabled={!isValidHex(baseColor)}
+              >
+                <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                팔레트 생성
+              </Button>
+            </div>
+
             <div className="flex flex-wrap items-center gap-4">
               {/* Preset pills */}
               <div className="flex flex-wrap gap-2">
@@ -299,6 +386,56 @@ export function App() {
                 </AlertDescription>
               </Alert>
             )}
+          </section>
+
+          {/* Adjustments section */}
+          <section className="rounded-xl border bg-card p-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-semibold">Adjustments</span>
+                <span className="text-xs text-muted-foreground">
+                  FL Studio 전역 색상 조정 — 공식 범위 미공개, 값이 과도하면 UI가 깨질 수 있습니다.
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
+                aria-label="Reset adjustments to defaults"
+              >
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                Reset
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {ADJUSTMENT_CONFIGS.map(({ key, label, min, max, step }) => (
+                <div key={key} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {label}
+                    </label>
+                    <span className="font-mono text-xs tabular-nums">
+                      {adjustments[key]}
+                    </span>
+                  </div>
+                  <Slider
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={[adjustments[key]]}
+                    onValueChange={([v]) =>
+                      setAdjustments((prev) => ({ ...prev, [key]: v }))
+                    }
+                    aria-label={label}
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground/50">
+                    <span>{min}</span>
+                    <span>{max}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
 
           {/* Preview section */}

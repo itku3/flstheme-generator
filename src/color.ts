@@ -146,6 +146,39 @@ export function adjustHex(hex: string, adjustments: Partial<Hsl>): string {
   );
 }
 
+export function generatePaletteFromColor(baseHex: string): string[] {
+  const hsl = rgbToHsl(hexToRgb(normalizeHex(baseHex)));
+
+  const background = adjustHex(baseHex, {
+    s: Math.min(hsl.s * 0.3, 0.25),
+    l: 0.07,
+  });
+
+  const accent = adjustHex(baseHex, {
+    s: Math.max(hsl.s, 0.5),
+    l: Math.min(Math.max(hsl.l, 0.50), 0.65),
+  });
+
+  const secondary = adjustHex(baseHex, {
+    h: (hsl.h + 30) % 360,
+    s: Math.min(hsl.s * 0.9, 0.75),
+    l: 0.55,
+  });
+
+  const complementary = adjustHex(baseHex, {
+    h: (hsl.h + 160) % 360,
+    s: Math.min(hsl.s * 0.8, 0.70),
+    l: 0.58,
+  });
+
+  const text = adjustHex(baseHex, {
+    s: Math.min(hsl.s * 0.12, 0.08),
+    l: 0.93,
+  });
+
+  return [background, accent, secondary, complementary, text];
+}
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
