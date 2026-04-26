@@ -135,13 +135,14 @@ function buildMeterColors(background: string, accent: string): string[] {
 }
 
 function buildNoteColors(palette: string[]): string[] {
+  // Cycle palette colors, vary only lightness to maintain palette coherence
+  const LIGHTNESS_STEPS = [0.45, 0.52, 0.59, 0.52];
   return Array.from({ length: 16 }, (_, index) => {
     const base = palette[index % palette.length];
     const hsl = rgbToHsl(hexToRgb(base));
     return adjustHex(base, {
-      h: hsl.h + index * 13,
-      s: Math.min(0.92, Math.max(0.35, hsl.s + 0.08)),
-      l: 0.46 + (index % 4) * 0.08,
+      s: Math.min(0.85, Math.max(0.40, hsl.s + 0.05)),
+      l: LIGHTNESS_STEPS[index % LIGHTNESS_STEPS.length],
     });
   });
 }
