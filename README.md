@@ -9,6 +9,7 @@
 - **FL Studio Adjustments 슬라이더** — Hue, Saturation, Lightness, Contrast, Text 전역 값을 직접 조정하고 미리보기에 실시간 반영합니다.
 - **FL Studio 스타일 미리보기** — Channel Rack, Piano Roll, Playlist, Meter를 포함한 UI 미리보기를 제공합니다.
 - **대비 자동 보정** — 텍스트 색상을 WCAG 기준으로 자동 선택해 가독성을 보장합니다.
+- **Piano Roll / Playlist 배경 동기화** — `PRGridback`과 `PLGridback`을 같은 색으로 생성해 주요 그리드 배경을 일관되게 유지합니다.
 - **다운로드** — 생성된 `.flstheme` 파일을 즉시 다운로드할 수 있습니다.
 
 ## 사용법
@@ -55,7 +56,7 @@ npm run build
 | 스타일링 | Tailwind CSS v3 + shadcn/ui |
 | 컴포넌트 | Radix UI (Slider, Tooltip, Separator 등) |
 | 테스트 | Vitest + Testing Library |
-| 색상 변환 | 직접 구현 (외부 의존성 없음) |
+| 색상 변환 | culori 기반 HEX/RGB/HSL/OKLCH 변환 |
 
 ## 프로젝트 구조
 
@@ -72,23 +73,26 @@ src/
 └── fixtures/
     └── templates/
         └── Grape.flstheme    # 기반 템플릿
+sample/                       # FL Studio 적용 확인용 생성 샘플
 ```
 
 ## .flstheme 포맷
 
-FL Studio 테마 파일은 `Key=Value` 형식의 텍스트 파일입니다. 색상은 signed 24-bit RGB 정수로 표현됩니다.
+FL Studio 테마 파일은 `Key=Value` 형식의 텍스트 파일입니다. 색상은 대부분 signed 24-bit BGR 정수로 표현됩니다.
 
 ```
 # 변환 규칙
-HEX → FL: n >= 0x800000 ? n - 0x1000000 : n
-FL → HEX: (value & 0xFFFFFF).toString(16)
+HEX → FL: pack as 0xBBGGRR, then n >= 0x800000 ? n - 0x1000000 : n
+FL → HEX: unpack (value & 0xFFFFFF) as 0xBBGGRR
 
 # 예시
-#9A8CE5 → -6648603
+#9A8CE5 → -1733478
 #000000 → 0 (BackColor)
 ```
 
-이 도구는 화이트리스트된 키(`Selected`, `Highlight`, `Mute`, `Option`, `StepEven`, `StepOdd`, `Meter0`~`5`, `NoteColor0`~`15`, `BackColor`, `PRGridback`, `PLGridback`, `EEGridback`, `Lightmode`, `PRGridCustom`, `PLGridCustom`, `EEGridCustom`, `Hue`, `Saturation`, `Lightness`, `Contrast`, `Text`)만 수정하고 나머지는 템플릿 값을 그대로 보존합니다.
+`Selected`는 FL Studio에서 raw RGB 정수처럼 표시되는 예외가 있어 `#RRGGBB` 그대로 signed 24-bit 값으로 저장합니다. 예를 들어 `#9ACDDF`는 `Selected=-6631969`로 저장됩니다.
+
+이 도구는 화이트리스트된 키(`Selected`, `Highlight`, `Mute`, `Option`, `StepEven`, `StepOdd`, `Meter0`~`5`, `NoteColor0`~`15`, `BackColor`, `PRGridback`, `PLGridback`, `EEGridback`, `PRGridCustom`, `PLGridCustom`, `EEGridCustom`, `OverrideClips`, `BackMode`, `Hue`, `Saturation`, `Lightness`, `Contrast`, `Text`)만 수정하고 나머지는 템플릿 값을 그대로 보존합니다.
 
 ## 알려진 한계
 

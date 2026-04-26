@@ -32,12 +32,23 @@ export function rgbToHex(rgb: Rgb): string {
 }
 
 export function hexToFlColor(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  const n = (b << 16) | (g << 8) | r;
+  return n >= 0x800000 ? n - 0x1000000 : n;
+}
+
+export function hexToFlRgbColor(hex: string): number {
   const n = Number.parseInt(normalizeHex(hex).slice(1), 16);
   return n >= 0x800000 ? n - 0x1000000 : n;
 }
 
 export function flColorToHex(value: number): string {
-  return `#${(value & 0xffffff).toString(16).padStart(6, "0").toUpperCase()}`;
+  const n = value & 0xffffff;
+  return rgbToHex({
+    r: n & 0xff,
+    g: (n >> 8) & 0xff,
+    b: (n >> 16) & 0xff,
+  });
 }
 
 export function rgbToHsl(rgb: Rgb): Hsl {

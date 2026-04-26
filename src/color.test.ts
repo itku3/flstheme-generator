@@ -1,16 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, flColorToHex, generatePaletteFromColor, hexToFlColor, normalizeHex, readableTextColor, relativeLuminance } from "./color";
+import { contrastRatio, flColorToHex, generatePaletteFromColor, hexToFlColor, hexToFlRgbColor, normalizeHex, readableTextColor, relativeLuminance } from "./color";
 
 describe("color utilities", () => {
   it("converts HEX to FL Studio signed 24-bit color", () => {
-    expect(hexToFlColor("#9A8CE5")).toBe(-6648603);
+    expect(hexToFlColor("#9A8CE5")).toBe(-1733478);
+    expect(hexToFlColor("#00588F")).toBe(-7383040);
     expect(hexToFlColor("#000000")).toBe(0);
     expect(hexToFlColor("#FFFFFF")).toBe(-1);
   });
 
+  it("converts HEX to raw RGB signed 24-bit color for Selected", () => {
+    expect(hexToFlRgbColor("#9A8CE5")).toBe(-6648603);
+    expect(hexToFlRgbColor("#9ACDDF")).toBe(-6631969);
+    expect(hexToFlRgbColor("#000000")).toBe(0);
+    expect(hexToFlRgbColor("#FFFFFF")).toBe(-1);
+  });
+
   it("converts FL Studio signed 24-bit color to HEX", () => {
-    expect(flColorToHex(-6648603)).toBe("#9A8CE5");
-    expect(flColorToHex(-16777216)).toBe("#000000");
+    expect(flColorToHex(-1733478)).toBe("#9A8CE5");
+    expect(flColorToHex(-7383040)).toBe("#00588F");
+    expect(flColorToHex(0)).toBe("#000000");
   });
 
   it("validates HEX input", () => {

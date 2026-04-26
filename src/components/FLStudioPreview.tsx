@@ -66,7 +66,7 @@ export function FLStudioPreview({ mapping }: FLStudioPreviewProps) {
           </section>
 
           <section className="grid grid-cols-[1fr_120px] gap-3">
-            <div className="rounded-md p-3" style={{ backgroundColor: preview.muted }}>
+            <div className="rounded-md p-3" style={{ backgroundColor: preview.plGrid }}>
               <div className="mb-2 text-xs font-semibold uppercase">Piano roll</div>
               <div className="grid grid-cols-8 gap-1">
                 {Array.from({ length: 24 }, (_, index) => (
