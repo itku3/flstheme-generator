@@ -45,7 +45,7 @@ describe("theme format", () => {
 
   it("rejects non-whitelisted patch requests", () => {
     const parsed = parseThemeLines(fixture);
-    const invalidPatch = { OverrideClips: 0 } as unknown as ThemePatch;
+    const invalidPatch = { BackMode: 0 } as unknown as ThemePatch;
     expect(() => patchThemeTokens(parsed, invalidPatch)).toThrow("Cannot patch non-whitelisted key");
   });
 
@@ -81,7 +81,7 @@ describe("theme format", () => {
     // Hue is derived from the palette background, not hardcoded to 0
     expect(generated).toMatch(/(?:^|\r\n)Hue=-?\d+\r\n/);
     expect(generated).toContain("Lightmode=1\r\n");
-    expect(generated).toContain("OverrideClips=1\r\n");
+    expect(generated).toContain("OverrideClips=0\r\n");
     expect(generated).toContain("PRGridCustom=1\r\n");
     expect(generated).toContain("PLGridCustom=1\r\n");
     expect(generated).toContain("EEGridCustom=1\r\n");

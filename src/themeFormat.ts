@@ -40,11 +40,11 @@ export const PATCHABLE_THEME_KEYS = [
   "EEGridback",
   "EEGridCustom",
   "BackColor",
+  "OverrideClips",
 ] as const;
 
 export const PROTECTED_THEME_KEYS = [
   "Lightmode",
-  "OverrideClips",
   "PRGridContrast",
   "PLGridContrast",
   "EEGridContrast",
