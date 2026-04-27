@@ -79,9 +79,6 @@ export function presetPaletteById(id: string): Palette {
 //   bgHsl.h=340° (warm pink)  → fileHue=-126  (knob=0.15)
 //   bgHsl.h=216° (blue-gray, with dampening) → fileHue≈-11 (knob≈0.47)
 const FL_HUE_SCALE = 126 / 215;
-// For low-saturation inputs the dampening interpolates toward this base so that
-// near-neutral palettes land near knob-center rather than a large negative.
-const FL_HUE_DAMPENING_BASE = 18;
 
 const RGB_THEME_KEYS = new Set<PatchableThemeKey>([
   "Selected",
@@ -221,10 +218,10 @@ function dampenHueForLowSaturation(hue: number, preferredSelection: string): num
   const hsl = rgbToHsl(hexToRgb(preferredSelection));
   if (hsl.s >= 0.75) return hue;
 
-  // Interpolate toward FL_HUE_DAMPENING_BASE so that near-neutral palettes
-  // get a positive bias rather than collapsing to zero (which bleeds lime).
-  const scale = Math.max(0.2, hsl.s / 0.75);
-  return Math.max(-255, Math.min(255, Math.round(hue * scale + (1 - scale) * FL_HUE_DAMPENING_BASE)));
+  // Square the scale so that near-neutral colors collapse toward 0 smoothly,
+  // avoiding the large negative hue shifts that cause purple tinting.
+  const scale = hsl.s / 0.75;
+  return Math.round(hue * scale * scale);
 }
 
 function buildMeterColors(background: string, accent: string): string[] {

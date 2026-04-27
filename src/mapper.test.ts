@@ -114,7 +114,7 @@ describe("palette mapper", () => {
     });
 
     expect(mapping.preview.selected).toBe("#D0DAE6");
-    expect(mapping.patch.Hue).toBe(-11);
+    expect(mapping.patch.Hue).toBe(-9);
   });
 
   it("uses the playlist grid color for the piano roll grid background", () => {
