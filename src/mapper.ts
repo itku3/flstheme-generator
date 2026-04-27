@@ -77,7 +77,7 @@ export function presetPaletteById(id: string): Palette {
 // Hue file value that counteracts the lime base (125°). Calibrated against
 // knob = 0.5 + fileHue/360 so that:
 //   bgHsl.h=340° (warm pink)  → fileHue=-126  (knob=0.15)
-//   bgHsl.h=216° (blue-gray, with dampening) → fileHue≈-11 (knob≈0.47)
+//   bgHsl.h=216° (blue-gray, with dampening) → fileHue≈-9  (knob≈0.475)
 const FL_HUE_SCALE = 126 / 215;
 
 const RGB_THEME_KEYS = new Set<PatchableThemeKey>([
@@ -218,10 +218,13 @@ function dampenHueForLowSaturation(hue: number, preferredSelection: string): num
   const hsl = rgbToHsl(hexToRgb(preferredSelection));
   if (hsl.s >= 0.75) return hue;
 
-  // Square the scale so that near-neutral colors collapse toward 0 smoothly,
-  // avoiding the large negative hue shifts that cause purple tinting.
+  // scale² collapses near-neutral inputs toward 0.
+  // The cap (40 × scale^1.5) bounds colors whose rawAutoHue is large in magnitude
+  // simply because their hue is far from FL's lime base — not because they are saturated.
   const scale = hsl.s / 0.75;
-  return Math.round(hue * scale * scale);
+  const dampened = Math.round(hue * scale * scale);
+  const cap = Math.round(40 * Math.pow(scale, 1.5));
+  return Math.max(-cap, Math.min(cap, dampened));
 }
 
 function buildMeterColors(background: string, accent: string): string[] {
