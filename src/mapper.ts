@@ -73,12 +73,18 @@ export function presetPaletteById(id: string): Palette {
   return preset;
 }
 
-// -(bgHsl.h - 125) * FL_HUE_SCALE maps the palette background hue to a FL Studio
-// Hue file value that counteracts the lime base (125°). Calibrated against
-// knob = 0.5 + fileHue/360 so that:
-//   bgHsl.h=340° (warm pink)  → fileHue=-126  (knob=0.15)
-//   bgHsl.h=216° (blue-gray, with dampening) → fileHue≈-11 (knob≈0.47)
+// Hue correction formula (knob = 0.5 + fileHue/360). Two regimes:
+//
+//  Pink/cool side (h ≤ 125° or h > 200°):
+//    fileHue = -(bgHsl.h - 125) * FL_HUE_SCALE  (counteracts lime)
+//    bgHsl.h=340° (warm pink) → fileHue=-126 (knob=0.15)
+//    bgHsl.h=216° (blue-gray, dampened) → fileHue≈-11 (knob≈0.47)
+//
+//  Green zone (125° < h ≤ 200°):
+//    fileHue = +(bgHsl.h - 125) * FL_GREEN_HUE_SCALE  (pushes past lime into green)
+//    bgHsl.h=151° (mint green) → fileHue=+46 (knob≈0.628)
 const FL_HUE_SCALE = 126 / 215;
+const FL_GREEN_HUE_SCALE = 46 / 26; // calibrated: h=151° (mint, Δ=26° past lime) → fileHue=+46
 // For low-saturation inputs the dampening interpolates toward this base so that
 // near-neutral palettes land near knob-center rather than a large negative.
 const FL_HUE_DAMPENING_BASE = 18;
@@ -138,9 +144,11 @@ export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOpt
   const surface = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.18, 0.22), l: 0.82 });
   const surfaceAlt = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.14, 0.18), l: 0.88 });
   const text = readableTextColor(surface);
-  // FL Studio Lightmode=1 base hue ≈ 125° (lime). Rotating toward the palette's
-  // background hue prevents the lime base from bleeding through as olive/brown.
-  const rawAutoHue = Math.round(-(bgHsl.h - 125) * FL_HUE_SCALE);
+  // Green zone (125°–200°): push past lime into teal/mint with positive fileHue.
+  // All other hues: counteract lime with negative fileHue.
+  const rawAutoHue = (bgHsl.h > 125 && bgHsl.h <= 200)
+    ? Math.round((bgHsl.h - 125) * FL_GREEN_HUE_SCALE)
+    : Math.round(-(bgHsl.h - 125) * FL_HUE_SCALE);
   const autoHue = preferredSelection
     ? dampenHueForLowSaturation(rawAutoHue, preferredSelection)
     : rawAutoHue;
@@ -224,6 +232,8 @@ function dampenHueForLowSaturation(hue: number, preferredSelection: string): num
   // Warm hues (pink/red/orange, h ≥ 300° or h ≤ 50°) need the full correction
   // to stay warm against FL's lime base — don't reduce it.
   if (hsl.h >= 300 || hsl.h <= 50) return hue;
+  // Green zone: rawAutoHue is already calibrated to the correct positive value.
+  if (hsl.h > 125 && hsl.h <= 200) return hue;
 
   // Cool/neutral hues (blue-gray range) get a partial correction interpolated
   // toward FL_HUE_DAMPENING_BASE to avoid a jarring pink shift.

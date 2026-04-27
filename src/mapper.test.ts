@@ -129,6 +129,14 @@ describe("palette mapper", () => {
     expect(mapping.patch.Hue).toBe(-126);
   });
 
+  it("calibrates mint green generated palettes into the green zone with positive FL hue", () => {
+    const mapping = mapPaletteToTheme(generatePaletteFromColor("#A9D9C2"), {
+      preferredSelection: "#A9D9C2",
+    });
+
+    expect(mapping.patch.Hue).toBe(44);
+  });
+
   it("stores browser text color as raw RGB against the light FL surface", () => {
     const mapping = mapPaletteToTheme(generatePaletteFromColor("#FFB7CE"));
 
