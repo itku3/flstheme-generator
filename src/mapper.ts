@@ -221,8 +221,12 @@ function dampenHueForLowSaturation(hue: number, preferredSelection: string): num
   const hsl = rgbToHsl(hexToRgb(preferredSelection));
   if (hsl.s >= 0.75) return hue;
 
-  // Interpolate toward FL_HUE_DAMPENING_BASE so that near-neutral palettes
-  // get a positive bias rather than collapsing to zero (which bleeds lime).
+  // Warm hues (pink/red/orange, h ≥ 300° or h ≤ 50°) need the full correction
+  // to stay warm against FL's lime base — don't reduce it.
+  if (hsl.h >= 300 || hsl.h <= 50) return hue;
+
+  // Cool/neutral hues (blue-gray range) get a partial correction interpolated
+  // toward FL_HUE_DAMPENING_BASE to avoid a jarring pink shift.
   const scale = Math.max(0.2, hsl.s / 0.75);
   return Math.max(-255, Math.min(255, Math.round(hue * scale + (1 - scale) * FL_HUE_DAMPENING_BASE)));
 }
