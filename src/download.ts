@@ -10,11 +10,15 @@ export function downloadTextFile(filename: string, contents: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function safeThemeFilename(name: string): string {
+export function safeOutputFilename(name: string, extension: string): string {
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return `${slug || "palette-theme"}.flstheme`;
+  return `${slug || "palette-theme"}.${extension.replace(/^\./, "")}`;
+}
+
+export function safeThemeFilename(name: string): string {
+  return safeOutputFilename(name, "flstheme");
 }

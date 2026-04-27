@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { AlertCircle, Download, FileText, Moon, RotateCcw, Sun, Wand2 } from "lucide-react";
 import grapeTemplate from "./fixtures/templates/Grape.flstheme?raw";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -13,45 +13,55 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { FLStudioPreview } from "@/components/FLStudioPreview";
-import { downloadTextFile, safeThemeFilename } from "@/download";
-import { adjustHex, generatePaletteFromColor, hexToRgb, normalizeHex, rgbToHsl } from "@/color";
-import { mapPaletteToTheme, PRESET_PALETTES } from "@/mapper";
+import { downloadTextFile, safeOutputFilename, safeThemeFilename } from "@/download";
+import {
+  applyAdjustmentsToPreview,
+  DEFAULT_ADJUSTMENTS,
+  INPUT_COLOR_ADJUSTMENTS,
+  outputNoteColors,
+  type Adjustments,
+  withAdjustments,
+} from "@/adjustments";
+import {
+  adjustHex,
+  generatePaletteFromColor,
+  hexToRgb,
+  normalizeHex,
+  readableTextColor,
+  rgbToHsl,
+} from "@/color";
+import { mapPaletteToTheme, PRESET_PALETTES, PRESET_PALETTE_BY_ID } from "@/mapper";
 import type { ThemeMapping } from "@/mapper";
+import { serializeNoteColorPreset } from "@/ncp";
 import { generateTheme } from "@/themeFormat";
 
 const EMPTY_COLOR = "";
-
-type Adjustments = {
-  hue: number;
-  saturation: number;
-  lightness: number;
-  contrast: number;
-  text: number;
-};
-
-const DEFAULT_ADJUSTMENTS: Adjustments = {
-  hue: 0,
-  saturation: 256,
-  lightness: 118,
-  contrast: 64,
-  text: -191,
-};
+const PALETTE_HISTORY_KEY = "flstheme-generator.palette-history.v1";
+const APPEARANCE_KEY = "flstheme-generator.appearance.v1";
+const MAX_HISTORY_ITEMS = 8;
+const HEX_INPUT_RE = /^#?[0-9a-fA-F]{6}$/;
 
 const ADJUSTMENT_CONFIGS = [
   { key: "hue",        label: "Hue offset",  min: -127, max: 127, step: 1 },
   { key: "saturation", label: "Saturation",  min: 0,    max: 512, step: 1 },
-  { key: "lightness",  label: "Lightness",   min: 0,    max: 255, step: 1 },
+  { key: "lightness",  label: "Brightness",  min: 0,    max: 255, step: 1 },
   { key: "contrast",   label: "Contrast",    min: 0,    max: 127, step: 1 },
   { key: "text",       label: "Text",        min: -255, max: 255, step: 1 },
 ] as const;
 
 type PaletteResult =
-  | { status: "ready"; mapping: ThemeMapping; themeText: string }
+  | { status: "ready"; mapping: ThemeMapping; themeText: string; ncpText: string }
   | { status: "error"; error: string };
 
-function getSystemDark(): boolean {
-  return typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+type PaletteHistoryItem = {
+  baseHex: string;
+  colors: string[];
+  createdAt: number;
+};
+
+function loadDarkPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(APPEARANCE_KEY) === "dark";
 }
 
 function padPalette(colors: string[]): string[] {
@@ -69,53 +79,77 @@ function safeSwatch(color: string): string {
   }
 }
 
-function applyAdjToHex(hex: string, adj: Adjustments): string {
+function isValidHex(value: string): boolean {
+  return HEX_INPUT_RE.test(value.trim());
+}
+
+function isPaletteHistoryItem(value: unknown): value is PaletteHistoryItem {
+  if (!value || typeof value !== "object") return false;
+  const item = value as PaletteHistoryItem;
+  return (
+    typeof item.baseHex === "string" &&
+    typeof item.createdAt === "number" &&
+    Array.isArray(item.colors) &&
+    item.colors.every((color) => typeof color === "string" && isValidHex(color))
+  );
+}
+
+function loadPaletteHistory(): PaletteHistoryItem[] {
+  if (typeof window === "undefined") return [];
   try {
-    const hsl = rgbToHsl(hexToRgb(hex));
-    return adjustHex(hex, {
-      h: ((hsl.h + adj.hue * (360 / 127)) % 360 + 360) % 360,
-      s: Math.min(1, Math.max(0, hsl.s * (adj.saturation / 256))),
-      l: Math.min(1, Math.max(0, hsl.l + (adj.lightness - 128) / 255)),
-    });
+    const raw = window.localStorage.getItem(PALETTE_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isPaletteHistoryItem).slice(0, MAX_HISTORY_ITEMS);
   } catch {
-    return hex;
+    return [];
   }
 }
 
-function applyAdjToPreview(
-  preview: ThemeMapping["preview"],
-  adj: Adjustments,
-): ThemeMapping["preview"] {
-  const a = (c: string) => applyAdjToHex(c, adj);
-  return {
-    ...preview,
-    background: a(preview.background),
-    panel:      a(preview.panel),
-    plGrid:     a(preview.plGrid),
-    selected:   a(preview.selected),
-    highlight:  a(preview.highlight),
-    text:       a(preview.text),
-    muted:      a(preview.muted),
-    notes:      preview.notes.map(a),
-    meters:     preview.meters.map(a),
-  };
+function savePaletteHistory(history: PaletteHistoryItem[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PALETTE_HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    // Ignore storage failures; palette generation should still work.
+  }
 }
 
-function isValidHex(value: string): boolean {
-  return /^#?[0-9a-fA-F]{6}$/.test(value.trim());
+function upsertPaletteHistory(
+  history: PaletteHistoryItem[],
+  item: PaletteHistoryItem,
+): PaletteHistoryItem[] {
+  return [
+    item,
+    ...history.filter((entry) => entry.baseHex !== item.baseHex),
+  ].slice(0, MAX_HISTORY_ITEMS);
 }
 
-const STEPS = ["팔레트 선택", "미리보기", "내보내기"] as const;
+function hexToHslToken(hex: string): string {
+  const hsl = rgbToHsl(hexToRgb(hex));
+  return `${Math.round(hsl.h)} ${Math.round(hsl.s * 100)}% ${Math.round(hsl.l * 100)}%`;
+}
+
+function deriveWorkbenchColor(hex: string, lightness: number, saturationScale = 0.42): string {
+  const hsl = rgbToHsl(hexToRgb(hex));
+  return adjustHex(hex, {
+    s: Math.min(1, Math.max(0, hsl.s * saturationScale)),
+    l: lightness,
+  });
+}
 
 export function App() {
-  const [isDark, setIsDark] = useState(getSystemDark);
+  const [isDark, setIsDark] = useState(loadDarkPreference);
   const [selectedPreset, setSelectedPreset] = useState(PRESET_PALETTES[0].id);
   const [colors, setColors] = useState(() => padPalette(PRESET_PALETTES[0].colors));
   const [adjustments, setAdjustments] = useState<Adjustments>(DEFAULT_ADJUSTMENTS);
   const [baseColor, setBaseColor] = useState("");
+  const [paletteHistory, setPaletteHistory] = useState(loadPaletteHistory);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
+    window.localStorage.setItem(APPEARANCE_KEY, isDark ? "dark" : "light");
   }, [isDark]);
 
   const paletteResult = useMemo<PaletteResult>(() => {
@@ -128,23 +162,20 @@ export function App() {
           error: "팔레트는 4-6개의 HEX 색상이 필요합니다.",
         };
       }
-      const mapping = mapPaletteToTheme(normalized);
-      const autoHue = mapping.patch.Hue ?? 0;
-      const totalHue = Math.max(-127, Math.min(127, autoHue + adjustments.hue));
-      const finalPatch = {
-        ...mapping.patch,
-        Hue: totalHue,
-        Saturation: adjustments.saturation,
-        Lightness: adjustments.lightness,
-        Contrast: adjustments.contrast,
-        Text: adjustments.text,
-      };
+      const preferredSelection =
+        isValidHex(baseColor) && normalized.includes(normalizeHex(baseColor))
+          ? normalizeHex(baseColor)
+          : undefined;
+      const mapping = mapPaletteToTheme(normalized, { preferredSelection });
+      const finalPatch = withAdjustments(mapping, adjustments);
       const themeText = generateTheme(grapeTemplate, finalPatch);
+      const adjustedPreview = applyAdjustmentsToPreview(mapping.preview, adjustments);
+      const ncpText = serializeNoteColorPreset(outputNoteColors(mapping, adjustments));
       const adjustedMapping = {
         ...mapping,
-        preview: applyAdjToPreview(mapping.preview, adjustments),
+        preview: adjustedPreview,
       };
-      return { status: "ready", mapping: adjustedMapping, themeText };
+      return { status: "ready", mapping: adjustedMapping, themeText, ncpText };
     } catch (error) {
       return {
         status: "error",
@@ -157,13 +188,56 @@ export function App() {
   }, [colors, adjustments]);
 
   const isReady = paletteResult.status === "ready";
-  const currentStep = isReady ? 2 : 1;
+  const validColorCount = useMemo(() => colors.filter((color) => color.trim()).length, [colors]);
+  const selectedPresetName = PRESET_PALETTE_BY_ID.get(selectedPreset)?.name ?? "custom-palette";
+  const themeAccentStyle = (
+    isReady
+      ? (() => {
+          const workbenchBackground = isDark
+            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.08, 0.48)
+            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.96, 0.30);
+          const workbenchPanel = isDark
+            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.12, 0.44)
+            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.99, 0.18);
+          const workbenchMuted = isDark
+            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.18, 0.36)
+            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.91, 0.24);
+          const workbenchBorder = isDark
+            ? deriveWorkbenchColor(paletteResult.mapping.preview.highlight, 0.42, 0.55)
+            : deriveWorkbenchColor(paletteResult.mapping.preview.highlight, 0.72, 0.35);
+          const foreground = readableTextColor(workbenchBackground);
+
+          return {
+            "--theme-accent": paletteResult.mapping.preview.highlight,
+            "--theme-selected": paletteResult.mapping.preview.selected,
+            "--background": hexToHslToken(workbenchBackground),
+            "--foreground": hexToHslToken(foreground),
+            "--card": hexToHslToken(workbenchPanel),
+            "--card-foreground": hexToHslToken(readableTextColor(workbenchPanel)),
+            "--popover": hexToHslToken(workbenchPanel),
+            "--popover-foreground": hexToHslToken(readableTextColor(workbenchPanel)),
+            "--primary": hexToHslToken(paletteResult.mapping.preview.highlight),
+            "--primary-foreground": hexToHslToken(readableTextColor(paletteResult.mapping.preview.highlight)),
+            "--secondary": hexToHslToken(workbenchMuted),
+            "--secondary-foreground": hexToHslToken(readableTextColor(workbenchMuted)),
+            "--muted": hexToHslToken(workbenchMuted),
+            "--muted-foreground": hexToHslToken(foreground),
+            "--accent": hexToHslToken(paletteResult.mapping.preview.selected),
+            "--accent-foreground": hexToHslToken(readableTextColor(paletteResult.mapping.preview.selected)),
+            "--border": hexToHslToken(workbenchBorder),
+            "--input": hexToHslToken(workbenchBorder),
+            "--ring": hexToHslToken(paletteResult.mapping.preview.highlight),
+          };
+        })()
+      : undefined
+  ) as CSSProperties | undefined;
 
   const handlePresetChange = (presetId: string) => {
-    const preset = PRESET_PALETTES.find((p) => p.id === presetId);
+    const preset = PRESET_PALETTE_BY_ID.get(presetId);
     if (!preset) return;
     setSelectedPreset(presetId);
     setColors(padPalette(preset.colors));
+    setAdjustments(DEFAULT_ADJUSTMENTS);
   };
 
   const updateColor = (index: number, value: string) => {
@@ -175,70 +249,66 @@ export function App() {
 
   const handleGenerateFromColor = () => {
     if (!isValidHex(baseColor)) return;
-    const generated = generatePaletteFromColor(baseColor);
+    const normalizedBase = normalizeHex(baseColor);
+    const generated = generatePaletteFromColor(normalizedBase);
+    const nextHistory = upsertPaletteHistory(paletteHistory, {
+      baseHex: normalizedBase,
+      colors: generated,
+      createdAt: Date.now(),
+    });
     setSelectedPreset("custom");
     setColors(padPalette(generated));
+    setBaseColor(normalizedBase);
+    setAdjustments(INPUT_COLOR_ADJUSTMENTS);
+    setPaletteHistory(nextHistory);
+    savePaletteHistory(nextHistory);
+  };
+
+  const restoreHistoryItem = (item: PaletteHistoryItem) => {
+    setSelectedPreset("custom");
+    setBaseColor(item.baseHex);
+    setColors(padPalette(item.colors));
   };
 
   const downloadTheme = () => {
     if (!isReady) return;
-    const presetName =
-      PRESET_PALETTES.find((p) => p.id === selectedPreset)?.name ??
-      "custom-palette";
-    downloadTextFile(safeThemeFilename(presetName), paletteResult.themeText);
+    downloadTextFile(safeThemeFilename(selectedPresetName), paletteResult.themeText);
+  };
+
+  const downloadNcp = () => {
+    if (!isReady) return;
+    downloadTextFile(safeOutputFilename(selectedPresetName, "ncp"), paletteResult.ncpText);
+  };
+
+  const updateAdjustment = (key: keyof Adjustments, value: number) => {
+    setAdjustments((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-6">
-
-          {/* Header */}
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <Badge variant="outline" className="w-fit">FL Studio .flstheme</Badge>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Palette Theme Generator
-              </h1>
+      <div className="theme-lab min-h-screen bg-background text-foreground" style={themeAccentStyle}>
+        <div className="mx-auto flex min-h-screen max-w-[1500px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <header className="transport-bar flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/80 bg-card/90 px-4 py-3 shadow-sm backdrop-blur">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="theme-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-background font-mono text-xs font-bold text-primary">
+                FL
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+                    Palette Theme Generator
+                  </h1>
+                  <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-[0.18em]">
+                    .flstheme
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Palette in, FL Studio-ready theme out.
+                </p>
+              </div>
             </div>
 
-            {/* Step indicator */}
-            <nav aria-label="진행 단계" className="flex items-center gap-2 text-sm">
-              {STEPS.map((label, i) => {
-                const n = i + 1;
-                const isActive = currentStep === n;
-                const isDone = currentStep > n;
-                return (
-                  <div key={label} className="flex items-center gap-2">
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        isActive
-                          ? "text-foreground font-semibold"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                          isActive
-                            ? "bg-foreground text-background"
-                            : isDone
-                            ? "bg-muted text-muted-foreground"
-                            : "border border-muted-foreground/30 text-muted-foreground"
-                        }`}
-                      >
-                        {n}
-                      </span>
-                      <span>{label}</span>
-                    </div>
-                    {i < STEPS.length - 1 && (
-                      <span className="text-muted-foreground/30 select-none">—</span>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -277,225 +347,265 @@ export function App() {
             </div>
           </header>
 
-          {/* Palette section */}
-          <section className="rounded-xl border bg-card p-4 flex flex-col gap-4">
+          <main className="grid flex-1 gap-4 lg:grid-cols-[370px_minmax(0,1fr)]">
+            <aside className="control-surface flex flex-col gap-4 rounded-lg border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur">
+              <section className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="theme-eyebrow font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
+                      Source
+                    </p>
+                    <h2 className="text-sm font-semibold">Palette input</h2>
+                  </div>
+                  <Badge variant="secondary">{validColorCount}/6</Badge>
+                </div>
 
-            {/* Single color auto-generate */}
-            <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-border/50">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                단색으로 자동 생성
-              </span>
-              <div className="flex items-center gap-2">
-                <div
-                  className="relative h-7 w-7 shrink-0 cursor-pointer rounded-md border border-border"
-                  style={{ backgroundColor: safeSwatch(baseColor) }}
-                  onClick={() => document.getElementById("base-color-picker")?.click()}
-                  aria-hidden="true"
-                />
-                <input
-                  id="base-color-picker"
-                  type="color"
-                  className="sr-only"
-                  value={isValidHex(baseColor) ? normalizeHex(baseColor) : "#000000"}
-                  onChange={(e) => setBaseColor(e.target.value)}
-                  tabIndex={-1}
-                />
-                <input
-                  type="text"
-                  value={baseColor}
-                  onChange={(e) => setBaseColor(e.target.value)}
-                  placeholder="#89CFF0"
-                  aria-label="기준 색상"
-                  className="w-24 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
-                />
-              </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleGenerateFromColor}
-                disabled={!isValidHex(baseColor)}
-              >
-                <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-                팔레트 생성
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Preset pills */}
-              <div className="flex flex-wrap gap-2">
-                {PRESET_PALETTES.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    aria-label={preset.name}
-                    aria-pressed={selectedPreset === preset.id}
-                    onClick={() => handlePresetChange(preset.id)}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                      selectedPreset === preset.id
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                    }`}
-                  >
-                    <span className="flex">
-                      {preset.colors.slice(0, 5).map((color, ci) => (
-                        <span
-                          key={ci}
-                          className={`block h-4 w-4 rounded-full border-2 border-background ${ci > 0 ? "-ml-1.5" : ""}`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
+                <div className="rounded-md border bg-background/75 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      단색으로 자동 생성
                     </span>
-                    {preset.name}
-                  </button>
-                ))}
-              </div>
-
-              <Separator orientation="vertical" className="hidden h-8 sm:block" />
-
-              {/* Inline color swatches */}
-              <div className="flex flex-wrap gap-2">
-                {colors.map((color, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 ${
-                      color.trim()
-                        ? "border-border bg-background"
-                        : "border-dashed border-border/50 bg-muted/30"
-                    }`}
-                  >
-                    <label
-                      className="sr-only"
-                      htmlFor={`color-input-${index}`}
-                    >
-                      Color {index + 1}
-                    </label>
-
                     <div
-                      className="relative h-4 w-4 cursor-pointer rounded-sm border border-border"
-                      style={{ backgroundColor: safeSwatch(color) }}
-                      onClick={() =>
-                        document.getElementById(`color-picker-${index}`)?.click()
-                      }
+                      className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-border shadow-inner"
+                      style={{ backgroundColor: safeSwatch(baseColor) }}
+                      onClick={() => document.getElementById("base-color-picker")?.click()}
                       aria-hidden="true"
                     />
+                  </div>
+                  <div className="flex gap-2">
                     <input
-                      id={`color-picker-${index}`}
+                      id="base-color-picker"
                       type="color"
                       className="sr-only"
-                      value={
-                        safeSwatch(color) === "transparent"
-                          ? "#000000"
-                          : safeSwatch(color)
-                      }
-                      onChange={(e) => updateColor(index, e.target.value)}
+                      value={isValidHex(baseColor) ? normalizeHex(baseColor) : "#000000"}
+                      onChange={(e) => setBaseColor(e.target.value)}
                       tabIndex={-1}
                     />
-
                     <input
-                      id={`color-input-${index}`}
                       type="text"
-                      value={color}
-                      onChange={(e) => updateColor(index, e.target.value)}
-                      placeholder="#000000"
-                      className="w-20 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground/40"
-                      aria-invalid={Boolean(
-                        color && !/^#?[0-9a-fA-F]{6}$/.test(color.trim()),
-                      )}
+                      value={baseColor}
+                      onChange={(e) => setBaseColor(e.target.value)}
+                      placeholder="#89CFF0"
+                      aria-label="기준 색상"
+                      className="min-w-0 flex-1 rounded-md border border-border bg-card px-3 py-2 font-mono text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
                     />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Validation feedback */}
-            {paletteResult.status === "error" ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>입력 확인 필요</AlertTitle>
-                <AlertDescription>{paletteResult.error}</AlertDescription>
-              </Alert>
-            ) : (
-              <Alert>
-                <FileText className="h-4 w-4" />
-                <AlertTitle>생성 준비 완료</AlertTitle>
-                <AlertDescription>
-                  {Object.keys(paletteResult.mapping.patch).length}개 색상
-                  필드를 안전한 whitelist 안에서 변경합니다.
-                </AlertDescription>
-              </Alert>
-            )}
-          </section>
-
-          {/* Adjustments section */}
-          <section className="rounded-xl border bg-card p-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-semibold">Adjustments</span>
-                <span className="text-xs text-muted-foreground">
-                  FL Studio 전역 색상 조정 — 공식 범위 미공개, 값이 과도하면 UI가 깨질 수 있습니다.
-                </span>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
-                aria-label="Reset adjustments to defaults"
-              >
-                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Reset
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {ADJUSTMENT_CONFIGS.map(({ key, label, min, max, step }) => (
-                <div key={key} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      {label}
-                    </label>
-                    <span className="font-mono text-xs tabular-nums">
-                      {adjustments[key]}
-                    </span>
-                  </div>
-                  <Slider
-                    min={min}
-                    max={max}
-                    step={step}
-                    value={[adjustments[key]]}
-                    onValueChange={([v]) =>
-                      setAdjustments((prev) => ({ ...prev, [key]: v }))
-                    }
-                    aria-label={label}
-                  />
-                  <div className="flex justify-between text-[10px] text-muted-foreground/50">
-                    <span>{min}</span>
-                    <span>{max}</span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleGenerateFromColor}
+                      disabled={!isValidHex(baseColor)}
+                    >
+                      <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                      생성
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          {/* Preview section */}
-          <section className="rounded-xl border bg-card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold">FL Studio Preview</span>
-              {paletteResult.status === "ready" && (
-                <span className="text-xs text-muted-foreground">
-                  Contrast {paletteResult.mapping.contrast.toFixed(1)}:1 ·
-                  Template: Grape.flstheme
-                </span>
-              )}
-            </div>
-            {paletteResult.status === "ready" ? (
-              <FLStudioPreview mapping={paletteResult.mapping} />
-            ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border bg-muted text-sm text-muted-foreground">
-                유효한 팔레트를 입력하면 미리보기가 표시됩니다.
+                {paletteHistory.length > 0 && (
+                  <div className="rounded-md border bg-background/60 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        최근 생성
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        local
+                      </span>
+                    </div>
+                    <div className="grid gap-2">
+                      {paletteHistory.map((item) => (
+                        <button
+                          key={`${item.baseHex}-${item.createdAt}`}
+                          type="button"
+                          aria-label={`생성 히스토리 ${item.baseHex}`}
+                          onClick={() => restoreHistoryItem(item)}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/70 px-2 py-2 text-left transition-colors hover:border-primary/60"
+                        >
+                          <span className="font-mono text-xs">{item.baseHex}</span>
+                          <span className="flex">
+                            {item.colors.map((color, ci) => (
+                              <span
+                                key={`${item.baseHex}-${color}-${ci}`}
+                                className={`block h-5 w-5 rounded-sm border border-background ${ci > 0 ? "-ml-1" : ""}`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  {PRESET_PALETTES.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-label={preset.name}
+                      aria-pressed={selectedPreset === preset.id}
+                      onClick={() => handlePresetChange(preset.id)}
+                      className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors ${
+                        selectedPreset === preset.id
+                          ? "border-primary/70 bg-primary/10 text-foreground"
+                          : "border-border bg-background/70 text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      }`}
+                    >
+                      <span>{preset.name}</span>
+                      <span className="flex">
+                        {preset.colors.slice(0, 5).map((color, ci) => (
+                          <span
+                            key={ci}
+                            className={`block h-5 w-5 rounded-sm border border-background ${ci > 0 ? "-ml-1" : ""}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {colors.map((color, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-md border p-2 ${
+                        color.trim()
+                          ? "border-border bg-background/70"
+                          : "border-dashed border-border/60 bg-muted/30"
+                      }`}
+                    >
+                      <label
+                        className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+                        htmlFor={`color-input-${index}`}
+                      >
+                        Color {index + 1}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-7 w-7 shrink-0 cursor-pointer rounded-sm border border-border"
+                          style={{ backgroundColor: safeSwatch(color) }}
+                          onClick={() =>
+                            document.getElementById(`color-picker-${index}`)?.click()
+                          }
+                          aria-hidden="true"
+                        />
+                        <input
+                          id={`color-picker-${index}`}
+                          type="color"
+                          className="sr-only"
+                          value={
+                            safeSwatch(color) === "transparent"
+                              ? "#000000"
+                              : safeSwatch(color)
+                          }
+                          onChange={(e) => updateColor(index, e.target.value)}
+                          tabIndex={-1}
+                        />
+                        <input
+                          id={`color-input-${index}`}
+                          type="text"
+                          value={color}
+                          onChange={(e) => updateColor(index, e.target.value)}
+                          placeholder="#000000"
+                          className="min-w-0 flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground/40"
+                          aria-invalid={Boolean(
+                            color && !isValidHex(color),
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <Separator />
+
+              <section className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="theme-eyebrow font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
+                      Global
+                    </p>
+                    <h2 className="text-sm font-semibold">Adjustments</h2>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
+                    aria-label="Reset adjustments to defaults"
+                  >
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                    Reset
+                  </Button>
+                </div>
+
+                <div className="grid gap-3">
+                  {ADJUSTMENT_CONFIGS.map(({ key, label, min, max, step }) => (
+                    <div key={key} className="rounded-md border bg-background/70 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          {label}
+                        </label>
+                        <span className="font-mono text-xs tabular-nums">
+                          {adjustments[key]}
+                        </span>
+                      </div>
+                      <Slider
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={[adjustments[key]]}
+                        onValueChange={([v]) =>
+                          updateAdjustment(key, v)
+                        }
+                        aria-label={label}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </aside>
+
+            <section className="preview-stage min-w-0 rounded-lg border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="theme-eyebrow font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
+                    Monitor
+                  </p>
+                  <h2 className="text-lg font-semibold">FL Studio Preview</h2>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {paletteResult.status === "ready" ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={downloadNcp}
+                      aria-label="Download ncp file"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      .ncp
+                    </Button>
+                  ) : (
+                    <div className="col-span-2 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{paletteResult.error}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </section>
 
+              {paletteResult.status === "ready" ? (
+                <FLStudioPreview mapping={paletteResult.mapping} />
+              ) : (
+                <div className="flex min-h-[420px] items-center justify-center rounded-lg border bg-muted text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    유효한 팔레트를 입력하면 미리보기가 표시됩니다.
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
         </div>
       </div>
     </TooltipProvider>

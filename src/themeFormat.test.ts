@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { mapPaletteToTheme, PRESET_PALETTES } from "./mapper";
+import { SAMPLE_THEMES } from "./sampleThemes";
+import { adjustmentPresetById, withAdjustments } from "./adjustments";
 import {
   PATCHABLE_THEME_KEYS,
   type ThemePatch,
@@ -80,10 +83,21 @@ describe("theme format", () => {
 
     expect(generated).toMatch(/(?:^|\r\n)Hue=-?\d+\r\n/);
     expect(generated).toContain("Lightmode=1\r\n");
-    expect(generated).toContain("OverrideClips=0\r\n");
+    expect(generated).toContain("OverrideClips=1\r\n");
     expect(generated).toContain("PRGridCustom=1\r\n");
     expect(generated).toContain("PLGridCustom=1\r\n");
     expect(generated).toContain("EEGridCustom=1\r\n");
     expect(generated).toContain("EEGridContrast=100\r\n");
+  });
+
+  it("keeps checked-in sample themes generated from the mapper", () => {
+    for (const { filename, palette, adjustmentPresetId = "grape", adjustments: explicitAdjustments, preferredSelection } of SAMPLE_THEMES) {
+      const mapping = mapPaletteToTheme(palette, { preferredSelection });
+      const patch = withAdjustments(mapping, explicitAdjustments ?? adjustmentPresetById(adjustmentPresetId).values);
+      const generated = generateTheme(fixture, patch);
+      const sample = readFileSync(join("sample", filename), "utf8");
+
+      expect(sample).toBe(generated);
+    }
   });
 });

@@ -33,9 +33,10 @@ describe("color utilities", () => {
     expect(contrastRatio("#08090B", readableTextColor("#08090B"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("generates a 5-color palette from a single hex color", () => {
+  it("generates a 6-color palette from a single hex color and preserves the requested color", () => {
     const palette = generatePaletteFromColor("#89CFF0");
-    expect(palette).toHaveLength(5);
+    expect(palette).toHaveLength(6);
+    expect(palette).toContain("#89CFF0");
     palette.forEach((c) => expect(() => normalizeHex(c)).not.toThrow());
     expect(relativeLuminance(palette[0])).toBeLessThan(relativeLuminance(palette[1]));
   });

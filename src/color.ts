@@ -42,6 +42,10 @@ export function hexToFlRgbColor(hex: string): number {
   return n >= 0x800000 ? n - 0x1000000 : n;
 }
 
+export function hexToNcpColor(hex: string): string {
+  return `FF${normalizeHex(hex).slice(1)}`;
+}
+
 export function flColorToHex(value: number): string {
   const n = value & 0xffffff;
   return rgbToHex({
@@ -93,7 +97,8 @@ export function adjustHex(hex: string, adjustments: Partial<Hsl>): string {
 }
 
 export function generatePaletteFromColor(baseHex: string): string[] {
-  const oklch = toOklch(normalizeHex(baseHex))!;
+  const base = normalizeHex(baseHex);
+  const oklch = toOklch(base)!;
   const h = oklch.h ?? 0;
   const c = oklch.c ?? 0;
 
@@ -104,13 +109,14 @@ export function generatePaletteFromColor(baseHex: string): string[] {
       c: Math.min(Math.max(c * chromaScale, minC), 0.35),
       h: (h + dh + 360) % 360,
     });
-    return (result ?? baseHex).toUpperCase();
+    return (result ?? base).toUpperCase();
   };
 
   return [
     make(0,   0.15, 0.35),        // background: very dark, same hue family
     make(0,   0.65, 1.20, 0.08),  // accent: vivid, matches input hue
     make(12,  0.60, 1.00, 0.07),  // secondary: slight warm shift
+    base,                          // requested color: keep Selection close to input
     make(-8,  0.82, 0.70),        // bright: lighter variant
     make(0,   0.95, 0.12),        // text: near-white with subtle tint
   ];

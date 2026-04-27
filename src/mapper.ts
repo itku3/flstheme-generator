@@ -1,6 +1,7 @@
 import {
   adjustHex,
   contrastRatio,
+  flColorToHex,
   hexToFlColor,
   hexToFlRgbColor,
   normalizeHex,
@@ -9,7 +10,7 @@ import {
   rgbToHsl,
   hexToRgb,
 } from "./color";
-import type { ThemePatch } from "./themeFormat";
+import type { PatchableThemeKey, ThemePatch } from "./themeFormat";
 
 export type Palette = {
   id: string;
@@ -21,16 +22,26 @@ export type ThemeMapping = {
   patch: ThemePatch;
   preview: {
     background: string;
+    surface: string;
+    surfaceAlt: string;
     panel: string;
     plGrid: string;
     selected: string;
     highlight: string;
+    mute: string;
+    option: string;
+    stepEven: string;
+    stepOdd: string;
     text: string;
     muted: string;
     notes: string[];
     meters: string[];
   };
   contrast: number;
+};
+
+export type ThemeMappingOptions = {
+  preferredSelection?: string;
 };
 
 export const PRESET_PALETTES: Palette[] = [
@@ -51,20 +62,70 @@ export const PRESET_PALETTES: Palette[] = [
   },
 ];
 
-export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
+export const PRESET_PALETTE_BY_ID = new Map(PRESET_PALETTES.map((palette) => [palette.id, palette]));
+
+export function presetPaletteById(id: string): Palette {
+  const preset = PRESET_PALETTE_BY_ID.get(id);
+  if (!preset) {
+    throw new Error(`Unknown preset palette: ${id}`);
+  }
+
+  return preset;
+}
+
+// -(bgHsl.h - 125) * FL_HUE_SCALE maps the palette background hue to a FL Studio
+// Hue file value that counteracts the lime base (125°). Calibrated against
+// knob = 0.5 + fileHue/360 so that:
+//   bgHsl.h=340° (warm pink)  → fileHue=-126  (knob=0.15)
+//   bgHsl.h=216° (blue-gray, with dampening) → fileHue≈-11 (knob≈0.47)
+const FL_HUE_SCALE = 126 / 215;
+// For low-saturation inputs the dampening interpolates toward this base so that
+// near-neutral palettes land near knob-center rather than a large negative.
+const FL_HUE_DAMPENING_BASE = 18;
+
+const RGB_THEME_KEYS = new Set<PatchableThemeKey>([
+  "Selected",
+  "TextColor",
+]);
+
+function encodeThemeColor(key: PatchableThemeKey, hex: string): number {
+  return RGB_THEME_KEYS.has(key) ? hexToFlRgbColor(hex) : hexToFlColor(hex);
+}
+
+function decodeThemeColor(key: PatchableThemeKey, value: number): string {
+  if (RGB_THEME_KEYS.has(key)) {
+    return `#${(value & 0xffffff).toString(16).padStart(6, "0").toUpperCase()}`;
+  }
+
+  return flColorToHex(value);
+}
+
+export const themeColorCodec = {
+  encode: encodeThemeColor,
+  decode: decodeThemeColor,
+};
+
+export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOptions = {}): ThemeMapping {
   const palette = normalizePalette(rawPalette);
+  const preferredSelection = options.preferredSelection
+    ? normalizeHex(options.preferredSelection)
+    : undefined;
   const sortedByLight = [...palette].sort((a, b) => relativeLuminance(a) - relativeLuminance(b));
   const background = sortedByLight[0];
   const bgHsl = rgbToHsl(hexToRgb(background));
   const panel = adjustHex(background, { l: Math.min(0.28, bgHsl.l + 0.08) });
-  const text = readableTextColor(background);
-  const accentCandidates = [...palette]
-    .filter((c) => scoreAccent(c, background) > 0)
-    .sort((a, b) => scoreAccent(b, background) - scoreAccent(a, background));
-  const selected = accentCandidates[0] ?? palette[0];
-  const highlight = accentCandidates[1] ?? selected;
-  const mute = accentCandidates[2] ?? highlight;
-  const option = accentCandidates[3] ?? selected;
+  const accentCandidates = palette
+    .map((color) => ({ color, score: scoreAccent(color, background) }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((candidate) => candidate.color);
+  const selected = preferredSelection && palette.includes(preferredSelection)
+    ? preferredSelection
+    : accentCandidates[0] ?? palette[0];
+  const remainingAccentCandidates = accentCandidates.filter((color) => color !== selected);
+  const highlight = remainingAccentCandidates[0] ?? selected;
+  const mute = remainingAccentCandidates[1] ?? highlight;
+  const option = remainingAccentCandidates[2] ?? selected;
   const stepEven = adjustHex(panel, { l: 0.28 });
   const stepOdd = adjustHex(panel, { l: 0.20 });
   const meters = buildMeterColors(background, highlight);
@@ -74,55 +135,67 @@ export function mapPaletteToTheme(rawPalette: string[]): ThemeMapping {
     s: Math.min(selectedHsl.s * 0.25, 0.20),
     l: 0.88,
   });
+  const surface = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.18, 0.22), l: 0.82 });
+  const surfaceAlt = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.14, 0.18), l: 0.88 });
+  const text = readableTextColor(surface);
   // FL Studio Lightmode=1 base hue ≈ 125° (lime). Rotating toward the palette's
   // background hue prevents the lime base from bleeding through as olive/brown.
-  const autoHue = Math.max(-127, Math.min(127, Math.round(-(bgHsl.h - 125) * 127 / 360)));
+  const rawAutoHue = Math.round(-(bgHsl.h - 125) * FL_HUE_SCALE);
+  const autoHue = preferredSelection
+    ? dampenHueForLowSaturation(rawAutoHue, preferredSelection)
+    : rawAutoHue;
 
   const patch: ThemePatch = {
     Hue: autoHue,
-    OverrideClips: 0,
+    OverrideClips: 1,
     BackMode: 0,
-    BackColor: hexToFlColor(background),
-    PRGridback: hexToFlColor(plGrid),
+    BackColor: encodeThemeColor("BackColor", background),
+    PRGridback: encodeThemeColor("PRGridback", plGrid),
     PRGridCustom: 1,
-    PLGridback: hexToFlColor(plGrid),
+    PLGridback: encodeThemeColor("PLGridback", plGrid),
     PLGridCustom: 1,
-    EEGridback: hexToFlColor(stepOdd),
+    EEGridback: encodeThemeColor("EEGridback", stepOdd),
     EEGridCustom: 1,
-    // FL Studio reads Selected as raw RGB while most other theme colors use BGR/COLORREF.
-    Selected: hexToFlRgbColor(selected),
-    Highlight: hexToFlColor(highlight),
-    Mute: hexToFlColor(mute),
-    Option: hexToFlColor(option),
-    StepEven: hexToFlColor(stepEven),
-    StepOdd: hexToFlColor(stepOdd),
-    TextColor: hexToFlColor(text),
-    Meter0: hexToFlColor(meters[0]),
-    Meter1: hexToFlColor(meters[1]),
-    Meter2: hexToFlColor(meters[2]),
-    Meter3: hexToFlColor(meters[3]),
-    Meter4: hexToFlColor(meters[4]),
-    Meter5: hexToFlColor(meters[5]),
+    Selected: encodeThemeColor("Selected", selected),
+    Highlight: encodeThemeColor("Highlight", highlight),
+    Mute: encodeThemeColor("Mute", mute),
+    Option: encodeThemeColor("Option", option),
+    StepEven: encodeThemeColor("StepEven", stepEven),
+    StepOdd: encodeThemeColor("StepOdd", stepOdd),
+    TextColor: encodeThemeColor("TextColor", text),
+    Meter0: encodeThemeColor("Meter0", meters[0]),
+    Meter1: encodeThemeColor("Meter1", meters[1]),
+    Meter2: encodeThemeColor("Meter2", meters[2]),
+    Meter3: encodeThemeColor("Meter3", meters[3]),
+    Meter4: encodeThemeColor("Meter4", meters[4]),
+    Meter5: encodeThemeColor("Meter5", meters[5]),
   };
 
   notes.forEach((note, index) => {
-    patch[`NoteColor${index}` as keyof ThemePatch] = hexToFlColor(note);
+    const key = `NoteColor${index}` as PatchableThemeKey;
+    patch[key] = encodeThemeColor(key, note);
   });
 
   return {
     patch,
     preview: {
       background,
+      surface,
+      surfaceAlt,
       panel,
       plGrid,
       selected,
       highlight,
+      mute,
+      option,
+      stepEven,
+      stepOdd,
       text,
       muted: stepEven,
       notes,
       meters,
     },
-    contrast: contrastRatio(background, text),
+    contrast: contrastRatio(surface, text),
   };
 }
 
@@ -138,9 +211,20 @@ export function normalizePalette(rawPalette: string[]): string[] {
 function scoreAccent(hex: string, background: string): number {
   const hsl = rgbToHsl(hexToRgb(hex));
   if (hsl.s < 0.15) return 0;
-  // Near-white or near-black colors make poor accents regardless of saturation
+  // Near-white or near-black colors make poor accents unless explicitly
+  // supplied as a preferred Selection by single-color generation.
   if (hsl.l > 0.85 || hsl.l < 0.15) return 0;
   return hsl.s * 4 + Math.min(contrastRatio(hex, background), 8) + hsl.l;
+}
+
+function dampenHueForLowSaturation(hue: number, preferredSelection: string): number {
+  const hsl = rgbToHsl(hexToRgb(preferredSelection));
+  if (hsl.s >= 0.75) return hue;
+
+  // Interpolate toward FL_HUE_DAMPENING_BASE so that near-neutral palettes
+  // get a positive bias rather than collapsing to zero (which bleeds lime).
+  const scale = Math.max(0.2, hsl.s / 0.75);
+  return Math.max(-255, Math.min(255, Math.round(hue * scale + (1 - scale) * FL_HUE_DAMPENING_BASE)));
 }
 
 function buildMeterColors(background: string, accent: string): string[] {
