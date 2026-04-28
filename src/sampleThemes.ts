@@ -20,10 +20,6 @@ export const SAMPLE_THEMES: SampleThemeDefinition[] = [
     palette: presetColors("grape-night"),
   },
   {
-    filename: "gn-fresh.flstheme",
-    palette: presetColors("grape-night"),
-  },
-  {
     filename: "sky-fresh.flstheme",
     palette: generatePaletteFromColor("#89CFF0"),
     preferredSelection: "#89CFF0",

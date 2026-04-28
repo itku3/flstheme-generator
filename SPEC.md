@@ -115,8 +115,14 @@ Color4=FF2C31FF
 
 현재 모델:
 
-- `Hue`는 팔레트 배경색의 hue를 기준으로 자동 계산한다.
-- FL Studio 브라우저/UI에서 시각적으로 더 비슷하게 보이도록 hue는 `19 / 28` 비율로 낮추는 보정을 적용한다.
+- `Hue`는 팔레트 배경색의 hue(°)를 기준으로 단일 선형 공식으로 자동 계산한다.
+  ```
+  fileHue = round(-(bgHsl.h - 202) * (63 / 69))
+  ```
+  - 중립점 202°(청록-차트러스 경계)에서 fileHue=0
+  - h=340° (warm pink, #FFB7CE) → fileHue=-126 (knob=0.15)
+  - h=151° (mint green, #A9D9C2) → fileHue=+47 (knob≈0.630)
+  - h=215° (blue-gray, #D0DAE6) → fileHue=-13 (knob≈0.464)
 - `Grape` 조정 프리셋은 다음 값을 사용한다.
   - `Saturation=256`
   - `Lightness=132`
@@ -129,39 +135,21 @@ Color4=FF2C31FF
 
 - `Selected` 자체가 핵심 문제는 아니었다.
 - FL Studio 안의 브라우저와 전체 UI 색상을 입력한 핑크에 더 가깝게 보이게 하려면 `Hue`는 낮추고 `Brightness/Lightness`는 올려야 했다.
+- 현재 공식으로 `#FFB7CE`(h≈340°)는 `Hue=-126`을 자동 계산한다.
 
 중요 원칙:
 
 - 전역 조정값 문제를 해결하려고 개별 색상 필드의 인코딩 방식을 섣불리 바꾸면 안 된다.
 
-## 외부 테마 폴더 분석 결과
+## 외부 테마 분석 결과 요약
 
-대상 폴더:
+외부 `.flstheme` 파일 분석을 통해 확인한 주요 사항:
 
-```txt
-sample/Fl Studio Themes
-```
-
-확인한 내용:
-
-- 외부 `.flstheme` 파일 25개가 있다.
-- 대부분은 49개 키 구조를 갖지만, 33, 34, 40, 46, 47줄짜리 테마도 유효해 보인다.
-- `BackMode` 분포:
-  - `0`: 12개
-  - `2`: 13개
-- `Lightmode` 분포:
-  - `0`: 14개
-  - `1`: 11개
-- `OverrideClips` 분포:
-  - `0`: 12개
-  - `1`: 12개
-  - 누락: 1개
+- 대부분은 49개 키 구조를 갖지만, 33~47줄짜리 테마도 유효하다.
 - `PRGridCustom`, `PLGridCustom`, `EEGridCustom` 값은 테마마다 다르다.
-- 현재 생성기는 grid background를 커스텀 값으로 강제하는 쪽에 가깝다.
-- `Late Night Lights` 같은 테마에서는 `PLGridContrast=50`처럼 grid contrast 값도 바뀐다.
-- 일부 테마에는 `WaveClr0`부터 `WaveClr5`, `WaveSpc0`부터 `WaveSpc5`가 있다.
-- 몇몇 테마는 현재 생성기가 patch하려는 키를 모두 갖고 있지 않다.
-- 향후 importer를 만들 경우 누락된 키를 허용해야 한다.
+- 일부 테마에는 `WaveClr0`~`WaveClr5`, `WaveSpc0`~`WaveSpc5`가 있다.
+- 몇몇 테마는 현재 생성기가 patch하려는 키를 모두 갖고 있지 않다. 향후 importer 구현 시 누락된 키를 허용해야 한다.
+- `.ncp` 포맷 검증 픽스처는 `src/fixtures/midnight-pro.ncp`에 보관한다.
 
 ## 현재 생성 샘플
 
@@ -173,17 +161,11 @@ npm run generate:samples
 
 현재 정의된 샘플:
 
-- `Grape.flstheme`
-- `gn-fresh.flstheme`
-- `sky-fresh.flstheme`
-- `bb.flstheme`
+- `Grape.flstheme` — `grape-night` 프리셋, 기본 조정값
+- `sky-fresh.flstheme` — `#89CFF0` 단색 생성, `INPUT_COLOR_ADJUSTMENTS`
+- `bb.flstheme` — `#FFB7CE` 단색 생성, `INPUT_COLOR_ADJUSTMENTS`, `Hue=-126`
 
 샘플 목록은 `src/sampleThemes.ts`에서 관리한다.
-
-`bb.flstheme`은 `#FFB7CE`에 보정값을 적용한 샘플이다.
-
-- `Hue=-92`
-- `Lightness=132`
 
 ## 주요 리스크
 
@@ -205,107 +187,6 @@ npm run generate:samples
 - `NoteColor*`는 `sample/note pink.flstheme` 근거에 따라 BGR/COLORREF로 유지한다.
 - 전역 조정값 보정과 개별 필드 색상 매핑은 섞지 않는다.
 
-## 여러 AI를 위한 병렬 작업 계획
-
-### 작업자 A: 노트 색상과 `.ncp` 지원
-
-목표:
-
-- `preview.notes`를 기반으로 `.ncp` 파일을 생성한다.
-- `.flstheme`의 `NoteColor*`는 BGR/COLORREF로 유지한다.
-
-작업:
-
-- `#RRGGBB -> 0xFFRRGGBB signed int` 변환 헬퍼를 추가한다.
-- `Color0=FFRRGGBB`부터 `Color15=FFRRGGBB`까지 출력하는 `.ncp` serializer를 추가한다.
-- 생성된 `.ncp`를 `Midnight Pro.ncp` 구조와 비교한다.
-- `.flstheme`의 `NoteColor*`가 `sample/note pink.flstheme`의 `NoteColor0=13547519` 규칙과 맞는지 테스트로 고정한다.
-- serializer와 decoding 테스트를 추가한다.
-
-수용 기준:
-
-- `npm test`에서 `.ncp` 출력이 검증된다.
-- `.flstheme`의 `NoteColor*`는 BGR/COLORREF로 검증된다.
-- 생성된 `.ncp`는 CRLF를 사용한다.
-- `Selected`와 `TextColor` 동작이 회귀되지 않는다.
-
-### 작업자 B: 테마 포맷 유연성
-
-목표:
-
-- 실제 테마에서 발견되는 누락 키와 선택적 키를 안전하게 처리한다.
-
-작업:
-
-- `themeFormat.ts`가 키 누락 상황에서 어떻게 동작하는지 점검한다.
-- import된 템플릿에 patch 가능한 키가 없을 때 뒤에 추가하는 모드를 검토한다.
-- `WaveClr*`, `WaveSpc*` 같은 알 수 없는 키를 보존한다.
-- `Night Vision`, `Purple`, `Rukia` 같은 짧은 외부 테마로 테스트를 추가한다.
-
-수용 기준:
-
-- 기본 템플릿 기반 생성 결과는 기존과 동일하게 유지된다.
-- 선택적 importer 경로에서는 짧은 외부 테마도 불필요하게 실패하지 않는다.
-
-### 작업자 C: 격자와 파형 필드 확장
-
-목표:
-
-- 외부 테마에서 실제로 사용되는 격자/파형 관련 필드를 지원 범위에 넣을지 판단한다.
-
-작업:
-
-- `PRGridContrast`, `PLGridContrast`, `EEGridContrast`를 보호 필드로 둘지, patch 가능한 필드로 옮길지 검토한다.
-- `WaveClr0`부터 `WaveClr5`까지 선택적 매핑을 추가할지 검토한다.
-- `WaveSpc0`부터 `WaveSpc5`까지 observed theme 기준 고정값 또는 매핑값을 검토한다.
-- 외부 테마에서 값 범위를 비교한다.
-
-수용 기준:
-
-- 새로 지원하는 키에는 테스트가 있다.
-- 기본값은 보수적으로 유지된다.
-- 기존 생성 샘플의 FL 호환성이 의도치 않게 깨지지 않는다.
-
-### 작업자 D: 보정값과 프리셋 전략
-
-목표:
-
-- 전역 조정값의 의미와 사용 기준을 명확하게 만든다.
-
-작업:
-
-- `src/adjustments.ts`를 검토한다.
-- 필요하면 테스트 전용 비교 샘플을 추가한다.
-- 실제 UI에서는 별도 비교 프리셋을 노출하지 않는다.
-- 전역 조정값을 튜닝하면서 개별 필드 인코딩을 같이 바꾸지 않는다.
-
-수용 기준:
-
-- `#FFB7CE`의 기대값인 `Hue=-92`, `Lightness=132`가 테스트로 유지된다.
-- zero adjustment는 UI 기본 흐름이 아니라 테스트나 임시 diagnostics에서만 사용한다.
-
-### 작업자 E: UI와 다운로드 흐름
-
-목표:
-
-- 새 출력물과 진단 정보를 UI에 추가하되, 화면을 복잡하게 만들지 않는다.
-
-작업:
-
-- 작업자 A가 `.ncp` 생성을 구현하면 선택적 `.ncp` 다운로드를 추가한다.
-- 다음 정보를 보여주는 diagnostics panel을 검토한다.
-  - 필드명
-  - HEX 값
-  - 저장되는 정수값
-  - 인코딩 타입
-- 전체 UI는 라이트 모드 중심의 작업 도구 느낌을 유지한다.
-
-수용 기준:
-
-- 새 컨트롤은 UI 테스트로 보호된다.
-- 장식적 요소를 불필요하게 늘리지 않는다.
-- 다운로드 파일명은 명확하고 안전하다.
-
 ## 다음 마일스톤 수용 기준
 
 - 같은 팔레트에서 `.flstheme`과 `.ncp`를 함께 생성할 수 있다.
@@ -313,7 +194,7 @@ npm run generate:samples
 - 샘플은 한 명령으로 재생성할 수 있다.
 - 최소 하나 이상의 짧은 외부 테마를 테스트에서 파괴적 변경 없이 파싱한다.
 - `Selected`는 raw RGB로 유지되며 BGR 회귀가 없다.
-- `#FFB7CE` 샘플은 낮춘 hue와 올린 lightness 기준을 유지한다.
+- `#FFB7CE` 샘플은 `Hue=-126`, `Lightness=132` 기준을 유지한다.
 - 다음 검증이 모두 통과한다.
 
 ```bash

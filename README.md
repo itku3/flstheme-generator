@@ -1,6 +1,6 @@
 # FL Studio Palette Theme Generator
 
-팔레트 색상 6개로 FL Studio `.flstheme` 파일을 자동 생성하는 웹 도구입니다.
+팔레트 색상 4~6개로 FL Studio `.flstheme` 파일을 자동 생성하는 웹 도구입니다.
 
 ## 주요 기능
 
@@ -9,13 +9,13 @@
 - **FL Studio Adjustments 슬라이더** — Hue, Saturation, Lightness, Contrast, Text 전역 값을 직접 조정하고 미리보기에 실시간 반영합니다.
 - **FL Studio 스타일 미리보기** — Channel Rack, Piano Roll, Playlist, Meter를 포함한 UI 미리보기를 제공합니다.
 - **대비 자동 보정** — 텍스트 색상을 WCAG 기준으로 자동 선택해 가독성을 보장합니다.
-- **Piano Roll / Playlist 배경 동기화** — `PRGridback`과 `PLGridback`을 같은 색으로 생성해 주요 그리드 배경을 일관되게 유지합니다.
-- **다운로드** — 생성된 `.flstheme` 파일을 즉시 다운로드할 수 있습니다.
+- **Piano Roll / Playlist 배경 동기화** — `PRGridback`과 `PLGridback`을 같은 색으로 생성해 그리드 배경을 일관되게 유지합니다.
+- **다운로드** — 생성된 `.flstheme` 파일과 `.ncp` 파일을 즉시 다운로드할 수 있습니다.
 
 ## 사용법
 
 1. **팔레트 선택** — 내장 프리셋(Grape Night, Oxide Lime, Cold Signal) 또는 직접 입력한 HEX 색상 4~6개를 사용합니다.
-   - 또는 단색 입력 후 **팔레트 생성** 버튼으로 자동 추천을 받을 수 있습니다.
+   - 또는 단색 입력 후 **Generate** 버튼으로 자동 추천을 받을 수 있습니다.
 2. **Adjustments 조정** (선택) — Hue, Saturation 등의 슬라이더를 움직여 미리보기를 확인합니다.
 3. **Download** — 우측 상단 버튼으로 `.flstheme` 파일을 다운로드합니다.
 4. **FL Studio 적용** — `Options > Theme` 에서 다운로드한 파일을 선택합니다.
@@ -55,8 +55,8 @@ npm run build
 | 빌드 도구 | Vite 6 |
 | 스타일링 | Tailwind CSS v3 + shadcn/ui |
 | 컴포넌트 | Radix UI (Slider, Tooltip, Separator 등) |
-| 테스트 | Vitest + Testing Library |
-| 색상 변환 | culori 기반 HEX/RGB/HSL/OKLCH 변환 |
+| 테스트 | Vitest |
+| 색상 변환 | HEX / RGB / HSL / OKLCH 변환 유틸리티 |
 
 ## 프로젝트 구조
 
@@ -65,6 +65,7 @@ src/
 ├── color.ts              # HEX ↔ RGB ↔ HSL 변환, 팔레트 생성
 ├── mapper.ts             # 팔레트 → ThemePatch 매핑 로직
 ├── themeFormat.ts        # .flstheme 파싱 / 패치 / 직렬화
+├── adjustments.ts        # 전역 조정값 프리셋 및 적용
 ├── download.ts           # 파일 다운로드 유틸
 ├── App.tsx               # 메인 UI
 ├── components/
@@ -90,7 +91,7 @@ FL → HEX: unpack (value & 0xFFFFFF) as 0xBBGGRR
 #000000 → 0 (BackColor)
 ```
 
-`Selected`는 FL Studio에서 raw RGB 정수처럼 표시되는 예외가 있어 `#RRGGBB` 그대로 signed 24-bit 값으로 저장합니다. 예를 들어 `#9ACDDF`는 `Selected=-6631969`로 저장됩니다.
+`Selected`와 `TextColor`는 예외로, FL Studio가 raw RGB 정수로 읽기 때문에 바이트 스왑 없이 그대로 저장합니다.
 
 이 도구는 화이트리스트된 키(`Selected`, `Highlight`, `Mute`, `Option`, `StepEven`, `StepOdd`, `Meter0`~`5`, `NoteColor0`~`15`, `BackColor`, `PRGridback`, `PLGridback`, `EEGridback`, `PRGridCustom`, `PLGridCustom`, `EEGridCustom`, `OverrideClips`, `BackMode`, `Hue`, `Saturation`, `Lightness`, `Contrast`, `Text`)만 수정하고 나머지는 템플릿 값을 그대로 보존합니다.
 

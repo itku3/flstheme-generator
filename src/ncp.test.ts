@@ -24,7 +24,7 @@ describe("note color preset format", () => {
       "#1B653E",
     ]);
 
-    const midnightPreset = readFileSync("sample/Fl Studio Themes/Midnight Pro/Midnight Pro.ncp", "utf8");
+    const midnightPreset = readFileSync("src/fixtures/midnight-pro.ncp", "utf8");
 
     expect(text).toBe(midnightPreset);
     expect(text).toContain("\r\n");
