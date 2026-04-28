@@ -59,12 +59,12 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const baseInput = screen.getByLabelText("기준 색상");
+    const baseInput = screen.getByLabelText("Base color");
     await user.type(baseInput, "#89CFF0");
-    await user.click(screen.getByRole("button", { name: "생성" }));
+    await user.click(screen.getByRole("button", { name: "Generate" }));
 
-    expect(screen.getByText("최근 생성")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "생성 히스토리 #89CFF0" })).toBeInTheDocument();
+    expect(screen.getByText("Recent")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "History entry #89CFF0" })).toBeInTheDocument();
     expect(window.localStorage.getItem("flstheme-generator.palette-history.v1")).toContain("#89CFF0");
   });
 
@@ -79,9 +79,9 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const baseInput = screen.getByLabelText("기준 색상");
+    const baseInput = screen.getByLabelText("Base color");
     await user.type(baseInput, "#FFB7CE");
-    await user.click(screen.getByRole("button", { name: "생성" }));
+    await user.click(screen.getByRole("button", { name: "Generate" }));
 
     expect(screen.getByTitle("Note 0")).toHaveStyle({ backgroundColor: "#B82D5C" });
   });
@@ -90,9 +90,9 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const baseInput = screen.getByLabelText("기준 색상");
+    const baseInput = screen.getByLabelText("Base color");
     await user.type(baseInput, "#E8E5FF");
-    await user.click(screen.getByRole("button", { name: "생성" }));
+    await user.click(screen.getByRole("button", { name: "Generate" }));
 
     expect(screen.getByText("Brightness").closest("div")).toHaveTextContent("128");
   });
