@@ -114,7 +114,7 @@ describe("palette mapper", () => {
     });
 
     expect(mapping.preview.selected).toBe("#D0DAE6");
-    expect(mapping.patch.Hue).toBe(-11);
+    expect(mapping.patch.Hue).toBe(-13);
   });
 
   it("uses the playlist grid color for the piano roll grid background", () => {
@@ -134,7 +134,7 @@ describe("palette mapper", () => {
       preferredSelection: "#A9D9C2",
     });
 
-    expect(mapping.patch.Hue).toBe(44);
+    expect(mapping.patch.Hue).toBe(47);
   });
 
   it("stores browser text color as raw RGB against the light FL surface", () => {

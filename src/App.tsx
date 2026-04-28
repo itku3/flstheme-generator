@@ -159,7 +159,7 @@ export function App() {
       if (normalized.length < 4 || normalized.length > 6) {
         return {
           status: "error",
-          error: "팔레트는 4-6개의 HEX 색상이 필요합니다.",
+          error: "Palette must contain 4 to 6 HEX colors.",
         };
       }
       const preferredSelection =
@@ -182,7 +182,7 @@ export function App() {
         error:
           error instanceof Error
             ? error.message
-            : "팔레트를 해석할 수 없습니다.",
+            : "Failed to parse palette.",
       };
     }
   }, [colors, adjustments]);
@@ -325,7 +325,7 @@ export function App() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
+                  {isDark ? "Switch to light mode" : "Switch to dark mode"}
                 </TooltipContent>
               </Tooltip>
 
@@ -341,7 +341,7 @@ export function App() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  현재 팔레트로 .flstheme 파일을 다운로드합니다.
+                  Download .flstheme for the current palette.
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -363,7 +363,7 @@ export function App() {
                 <div className="rounded-md border bg-background/75 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <span className="text-xs font-semibold text-muted-foreground">
-                      단색으로 자동 생성
+                      Generate from single color
                     </span>
                     <div
                       className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-border shadow-inner"
@@ -386,7 +386,7 @@ export function App() {
                       value={baseColor}
                       onChange={(e) => setBaseColor(e.target.value)}
                       placeholder="#89CFF0"
-                      aria-label="기준 색상"
+                      aria-label="Base color"
                       className="min-w-0 flex-1 rounded-md border border-border bg-card px-3 py-2 font-mono text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
                     />
                     <Button
@@ -396,7 +396,7 @@ export function App() {
                       disabled={!isValidHex(baseColor)}
                     >
                       <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-                      생성
+                      Generate
                     </Button>
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export function App() {
                   <div className="rounded-md border bg-background/60 p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted-foreground">
-                        최근 생성
+                        Recent
                       </span>
                       <span className="font-mono text-[10px] text-muted-foreground">
                         local
@@ -416,7 +416,7 @@ export function App() {
                         <button
                           key={`${item.baseHex}-${item.createdAt}`}
                           type="button"
-                          aria-label={`생성 히스토리 ${item.baseHex}`}
+                          aria-label={`History entry ${item.baseHex}`}
                           onClick={() => restoreHistoryItem(item)}
                           className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/70 px-2 py-2 text-left transition-colors hover:border-primary/60"
                         >
@@ -600,7 +600,7 @@ export function App() {
                 <div className="flex min-h-[420px] items-center justify-center rounded-lg border bg-muted text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    유효한 팔레트를 입력하면 미리보기가 표시됩니다.
+                    Enter a valid palette to see the preview.
                   </div>
                 </div>
               )}

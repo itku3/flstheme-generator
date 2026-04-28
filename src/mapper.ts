@@ -73,21 +73,15 @@ export function presetPaletteById(id: string): Palette {
   return preset;
 }
 
-// Hue correction formula (knob = 0.5 + fileHue/360). Two regimes:
+// Hue correction formula (knob = 0.5 + fileHue/360). Unified single-axis formula:
+//   fileHue = -(bgHsl.h - FL_HUE_NEUTRAL) * FL_HUE_SCALE
 //
-//  Pink/cool side (h ≤ 125° or h > 200°):
-//    fileHue = -(bgHsl.h - 125) * FL_HUE_SCALE  (counteracts lime)
-//    bgHsl.h=340° (warm pink) → fileHue=-126 (knob=0.15)
-//    bgHsl.h=216° (blue-gray, dampened) → fileHue≈-11 (knob≈0.47)
-//
-//  Green zone (125° < h ≤ 200°):
-//    fileHue = +(bgHsl.h - 125) * FL_GREEN_HUE_SCALE  (pushes past lime into green)
-//    bgHsl.h=151° (mint green) → fileHue=+46 (knob≈0.628)
-const FL_HUE_SCALE = 126 / 215;
-const FL_GREEN_HUE_SCALE = 46 / 26; // calibrated: h=151° (mint, Δ=26° past lime) → fileHue=+46
-// For low-saturation inputs the dampening interpolates toward this base so that
-// near-neutral palettes land near knob-center rather than a large negative.
-const FL_HUE_DAMPENING_BASE = 18;
+//   Calibrated from two empirical anchors:
+//     h=340° (#FFB7CE, warm pink)  → fileHue=-126 (knob=0.15)
+//     h=151° (#A9D9C2, mint green) → fileHue=+46  (knob≈0.628)
+//   → neutral point N≈202° (teal-chartreuse boundary), scale≈63/69≈0.913
+const FL_HUE_NEUTRAL = 202;
+const FL_HUE_SCALE = 63 / 69;
 
 const RGB_THEME_KEYS = new Set<PatchableThemeKey>([
   "Selected",
@@ -144,14 +138,7 @@ export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOpt
   const surface = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.18, 0.22), l: 0.82 });
   const surfaceAlt = adjustHex(plGrid, { s: Math.min(selectedHsl.s * 0.14, 0.18), l: 0.88 });
   const text = readableTextColor(surface);
-  // Green zone (125°–200°): push past lime into teal/mint with positive fileHue.
-  // All other hues: counteract lime with negative fileHue.
-  const rawAutoHue = (bgHsl.h > 125 && bgHsl.h <= 200)
-    ? Math.round((bgHsl.h - 125) * FL_GREEN_HUE_SCALE)
-    : Math.round(-(bgHsl.h - 125) * FL_HUE_SCALE);
-  const autoHue = preferredSelection
-    ? dampenHueForLowSaturation(rawAutoHue, preferredSelection)
-    : rawAutoHue;
+  const autoHue = Math.round(-(bgHsl.h - FL_HUE_NEUTRAL) * FL_HUE_SCALE);
 
   const patch: ThemePatch = {
     Hue: autoHue,
@@ -225,21 +212,6 @@ function scoreAccent(hex: string, background: string): number {
   return hsl.s * 4 + Math.min(contrastRatio(hex, background), 8) + hsl.l;
 }
 
-function dampenHueForLowSaturation(hue: number, preferredSelection: string): number {
-  const hsl = rgbToHsl(hexToRgb(preferredSelection));
-  if (hsl.s >= 0.75) return hue;
-
-  // Warm hues (pink/red/orange, h ≥ 300° or h ≤ 50°) need the full correction
-  // to stay warm against FL's lime base — don't reduce it.
-  if (hsl.h >= 300 || hsl.h <= 50) return hue;
-  // Green zone: rawAutoHue is already calibrated to the correct positive value.
-  if (hsl.h > 125 && hsl.h <= 200) return hue;
-
-  // Cool/neutral hues (blue-gray range) get a partial correction interpolated
-  // toward FL_HUE_DAMPENING_BASE to avoid a jarring pink shift.
-  const scale = Math.max(0.2, hsl.s / 0.75);
-  return Math.max(-255, Math.min(255, Math.round(hue * scale + (1 - scale) * FL_HUE_DAMPENING_BASE)));
-}
 
 function buildMeterColors(background: string, accent: string): string[] {
   const accentHsl = rgbToHsl(hexToRgb(accent));
