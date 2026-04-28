@@ -112,6 +112,7 @@ export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOpt
     : undefined;
   const sortedByLight = [...palette].sort((a, b) => relativeLuminance(a) - relativeLuminance(b));
   const background = sortedByLight[0];
+  const backColor = preferredSelection ?? palette[0];
   const bgHsl = rgbToHsl(hexToRgb(background));
   const panel = adjustHex(background, { l: Math.min(0.28, bgHsl.l + 0.08) });
   const accentCandidates = palette
@@ -143,8 +144,8 @@ export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOpt
   const patch: ThemePatch = {
     Hue: autoHue,
     OverrideClips: 1,
-    BackMode: 0,
-    BackColor: encodeThemeColor("BackColor", background),
+    BackMode: 2,
+    BackColor: encodeThemeColor("BackColor", backColor),
     PRGridback: encodeThemeColor("PRGridback", plGrid),
     PRGridCustom: 1,
     PLGridback: encodeThemeColor("PLGridback", plGrid),
@@ -174,7 +175,7 @@ export function mapPaletteToTheme(rawPalette: string[], options: ThemeMappingOpt
   return {
     patch,
     preview: {
-      background,
+      background: backColor,
       surface,
       surfaceAlt,
       panel,

@@ -123,6 +123,27 @@ describe("palette mapper", () => {
     expect(mapping.patch.PRGridback).toBe(mapping.patch.PLGridback);
   });
 
+  it("uses the first palette color as the FL back color", () => {
+    const mapping = mapPaletteToTheme([
+      "#89CFF0",
+      "#101612",
+      "#26342A",
+      "#7CC66A",
+    ]);
+
+    expect(mapping.preview.background).toBe("#89CFF0");
+    expect(flColorToHex(mapping.patch.BackColor!)).toBe("#89CFF0");
+  });
+
+  it("uses the requested single-color input as the FL back color", () => {
+    const mapping = mapPaletteToTheme(generatePaletteFromColor("#FFB7CE"), {
+      preferredSelection: "#FFB7CE",
+    });
+
+    expect(mapping.preview.background).toBe("#FFB7CE");
+    expect(flColorToHex(mapping.patch.BackColor!)).toBe("#FFB7CE");
+  });
+
   it("calibrates warm pink generated palettes toward the lower FL hue range", () => {
     const mapping = mapPaletteToTheme(generatePaletteFromColor("#FFB7CE"));
 
