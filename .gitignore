@@ -38,3 +38,4 @@ vite.config.ts.timestamp*
 
 # Test coverage
 coverage/
+.vercel
