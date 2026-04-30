@@ -13,20 +13,22 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Palette Theme Generator" })).toBeInTheDocument();
     expect(screen.getByLabelText("FL Studio theme preview")).toBeInTheDocument();
     expect(screen.getByText("Palette input")).toBeInTheDocument();
-    expect(screen.getByText("Adjustments")).toBeInTheDocument();
+    expect(screen.queryByText("Adjustments")).not.toBeInTheDocument();
   });
 
-  it("renders all preset palette buttons", () => {
+  it("starts without preset palette examples", () => {
     render(<App />);
-    expect(screen.getByRole("button", { name: "Grape Night" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Oxide Lime" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cold Signal" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Grape Night" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Oxide Lime" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cold Signal" })).not.toBeInTheDocument();
+    expect(screen.getByText("0/6")).toBeInTheDocument();
   });
 
-  it("download button is enabled when preset palette is active", () => {
+  it("keeps downloads disabled until a valid palette is active", () => {
     render(<App />);
-    expect(screen.getByRole("button", { name: "Download flstheme file" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Download ncp file" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Download flstheme file" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Download ncp file" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("FL Studio theme preview")).toBeInTheDocument();
   });
 
   it("disables download and shows validation error for invalid HEX input", async () => {
@@ -68,14 +70,20 @@ describe("App", () => {
     expect(window.localStorage.getItem("flstheme-generator.palette-history.v1")).toContain("#89CFF0");
   });
 
-  it("keeps default global adjustment values visible", () => {
+  it("deletes generated palette entries from local history", async () => {
+    const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getByText("Saturation").closest("div")).toHaveTextContent("256");
-    expect(screen.getByText("Brightness").closest("div")).toHaveTextContent("132");
+    const baseInput = screen.getByLabelText("Base color");
+    await user.type(baseInput, "#89CFF0");
+    await user.click(screen.getByRole("button", { name: "Generate" }));
+    await user.click(screen.getByRole("button", { name: "Delete history entry #89CFF0" }));
+
+    expect(screen.queryByRole("button", { name: "History entry #89CFF0" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("flstheme-generator.palette-history.v1")).not.toContain("#89CFF0");
   });
 
-  it("shows channel rack note swatches after global adjustments", async () => {
+  it("shows playlist audio clip preview after global adjustments", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -83,10 +91,10 @@ describe("App", () => {
     await user.type(baseInput, "#FFB7CE");
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
-    expect(screen.getByTitle("Note 0")).toHaveStyle({ backgroundColor: "#B82D5C" });
+    expect(screen.getByTitle("Audio clip preview")).toBeInTheDocument();
   });
 
-  it("switches single-color generation to input-matched brightness", async () => {
+  it("keeps single-color generation usable after removing adjustment controls", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -94,6 +102,7 @@ describe("App", () => {
     await user.type(baseInput, "#E8E5FF");
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
-    expect(screen.getByText("Brightness").closest("div")).toHaveTextContent("128");
+    expect(screen.getByRole("button", { name: "Download flstheme file" })).toBeEnabled();
+    expect(screen.getByLabelText("FL Studio theme preview")).toBeInTheDocument();
   });
 });

@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { AlertCircle, Download, FileText, Moon, RotateCcw, Sun, Wand2 } from "lucide-react";
+import { AlertCircle, Download, FileText, Moon, Sun, Trash2, Wand2 } from "lucide-react";
 import grapeTemplate from "./fixtures/templates/Grape.flstheme?raw";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +28,7 @@ import {
   readableTextColor,
   rgbToHsl,
 } from "@/color";
-import { mapPaletteToTheme, PRESET_PALETTES, PRESET_PALETTE_BY_ID } from "@/mapper";
+import { mapPaletteToTheme } from "@/mapper";
 import type { ThemeMapping } from "@/mapper";
 import { serializeNoteColorPreset } from "@/ncp";
 import { generateTheme } from "@/themeFormat";
@@ -40,14 +38,7 @@ const PALETTE_HISTORY_KEY = "flstheme-generator.palette-history.v1";
 const APPEARANCE_KEY = "flstheme-generator.appearance.v1";
 const MAX_HISTORY_ITEMS = 8;
 const HEX_INPUT_RE = /^#?[0-9a-fA-F]{6}$/;
-
-const ADJUSTMENT_CONFIGS = [
-  { key: "hue",        label: "Hue offset",  min: -127, max: 127, step: 1 },
-  { key: "saturation", label: "Saturation",  min: 0,    max: 512, step: 1 },
-  { key: "lightness",  label: "Brightness",  min: 0,    max: 255, step: 1 },
-  { key: "contrast",   label: "Contrast",    min: 0,    max: 127, step: 1 },
-  { key: "text",       label: "Text",        min: -255, max: 255, step: 1 },
-] as const;
+const INITIAL_PREVIEW_COLORS = ["#121018", "#322B58", "#9A8CE5", "#DC778F", "#F8FAFC"];
 
 type PaletteResult =
   | { status: "ready"; mapping: ThemeMapping; themeText: string; ncpText: string }
@@ -141,11 +132,11 @@ function deriveWorkbenchColor(hex: string, lightness: number, saturationScale = 
 
 export function App() {
   const [isDark, setIsDark] = useState(loadDarkPreference);
-  const [selectedPreset, setSelectedPreset] = useState(PRESET_PALETTES[0].id);
-  const [colors, setColors] = useState(() => padPalette(PRESET_PALETTES[0].colors));
+  const [colors, setColors] = useState(() => padPalette([]));
   const [adjustments, setAdjustments] = useState<Adjustments>(DEFAULT_ADJUSTMENTS);
   const [baseColor, setBaseColor] = useState("");
   const [paletteHistory, setPaletteHistory] = useState(loadPaletteHistory);
+  const activeColors = useMemo(() => colors.map((c) => c.trim()).filter(Boolean), [colors]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -153,9 +144,8 @@ export function App() {
   }, [isDark]);
 
   const paletteResult = useMemo<PaletteResult>(() => {
-    const active = colors.map((c) => c.trim()).filter(Boolean);
     try {
-      const normalized = active.map(normalizeHex);
+      const normalized = activeColors.map(normalizeHex);
       if (normalized.length < 4 || normalized.length > 6) {
         return {
           status: "error",
@@ -185,63 +175,67 @@ export function App() {
             : "Failed to parse palette.",
       };
     }
-  }, [colors, adjustments]);
+  }, [activeColors, adjustments, baseColor]);
 
   const isReady = paletteResult.status === "ready";
-  const validColorCount = useMemo(() => colors.filter((color) => color.trim()).length, [colors]);
-  const selectedPresetName = PRESET_PALETTE_BY_ID.get(selectedPreset)?.name ?? "custom-palette";
+  const validColorCount = activeColors.length;
+  const outputName = "custom-palette";
+  const initialPreviewMapping = useMemo<ThemeMapping>(() => {
+    const mapping = mapPaletteToTheme(INITIAL_PREVIEW_COLORS);
+    return {
+      ...mapping,
+      preview: applyAdjustmentsToPreview(mapping.preview, adjustments),
+    };
+  }, [adjustments]);
+  const previewMapping =
+    paletteResult.status === "ready"
+      ? paletteResult.mapping
+      : validColorCount === 0
+        ? initialPreviewMapping
+        : undefined;
   const themeAccentStyle = (
-    isReady
+    previewMapping
       ? (() => {
           const workbenchBackground = isDark
-            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.08, 0.48)
-            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.96, 0.30);
+            ? deriveWorkbenchColor(previewMapping.preview.selected, 0.08, 0.48)
+            : deriveWorkbenchColor(previewMapping.preview.plGrid, 0.96, 0.30);
           const workbenchPanel = isDark
-            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.12, 0.44)
-            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.99, 0.18);
+            ? deriveWorkbenchColor(previewMapping.preview.selected, 0.12, 0.44)
+            : deriveWorkbenchColor(previewMapping.preview.plGrid, 0.99, 0.18);
           const workbenchMuted = isDark
-            ? deriveWorkbenchColor(paletteResult.mapping.preview.selected, 0.18, 0.36)
-            : deriveWorkbenchColor(paletteResult.mapping.preview.plGrid, 0.91, 0.24);
+            ? deriveWorkbenchColor(previewMapping.preview.selected, 0.18, 0.36)
+            : deriveWorkbenchColor(previewMapping.preview.plGrid, 0.91, 0.24);
           const workbenchBorder = isDark
-            ? deriveWorkbenchColor(paletteResult.mapping.preview.highlight, 0.42, 0.55)
-            : deriveWorkbenchColor(paletteResult.mapping.preview.highlight, 0.72, 0.35);
+            ? deriveWorkbenchColor(previewMapping.preview.highlight, 0.42, 0.55)
+            : deriveWorkbenchColor(previewMapping.preview.highlight, 0.72, 0.35);
           const foreground = readableTextColor(workbenchBackground);
 
           return {
-            "--theme-accent": paletteResult.mapping.preview.highlight,
-            "--theme-selected": paletteResult.mapping.preview.selected,
+            "--theme-accent": previewMapping.preview.highlight,
+            "--theme-selected": previewMapping.preview.selected,
             "--background": hexToHslToken(workbenchBackground),
             "--foreground": hexToHslToken(foreground),
             "--card": hexToHslToken(workbenchPanel),
             "--card-foreground": hexToHslToken(readableTextColor(workbenchPanel)),
             "--popover": hexToHslToken(workbenchPanel),
             "--popover-foreground": hexToHslToken(readableTextColor(workbenchPanel)),
-            "--primary": hexToHslToken(paletteResult.mapping.preview.highlight),
-            "--primary-foreground": hexToHslToken(readableTextColor(paletteResult.mapping.preview.highlight)),
+            "--primary": hexToHslToken(previewMapping.preview.highlight),
+            "--primary-foreground": hexToHslToken(readableTextColor(previewMapping.preview.highlight)),
             "--secondary": hexToHslToken(workbenchMuted),
             "--secondary-foreground": hexToHslToken(readableTextColor(workbenchMuted)),
             "--muted": hexToHslToken(workbenchMuted),
             "--muted-foreground": hexToHslToken(foreground),
-            "--accent": hexToHslToken(paletteResult.mapping.preview.selected),
-            "--accent-foreground": hexToHslToken(readableTextColor(paletteResult.mapping.preview.selected)),
+            "--accent": hexToHslToken(previewMapping.preview.selected),
+            "--accent-foreground": hexToHslToken(readableTextColor(previewMapping.preview.selected)),
             "--border": hexToHslToken(workbenchBorder),
             "--input": hexToHslToken(workbenchBorder),
-            "--ring": hexToHslToken(paletteResult.mapping.preview.highlight),
+            "--ring": hexToHslToken(previewMapping.preview.highlight),
           };
         })()
       : undefined
   ) as CSSProperties | undefined;
 
-  const handlePresetChange = (presetId: string) => {
-    const preset = PRESET_PALETTE_BY_ID.get(presetId);
-    if (!preset) return;
-    setSelectedPreset(presetId);
-    setColors(padPalette(preset.colors));
-    setAdjustments(DEFAULT_ADJUSTMENTS);
-  };
-
   const updateColor = (index: number, value: string) => {
-    setSelectedPreset("custom");
     setColors((current) =>
       current.map((c, i) => (i === index ? value : c)),
     );
@@ -256,7 +250,6 @@ export function App() {
       colors: generated,
       createdAt: Date.now(),
     });
-    setSelectedPreset("custom");
     setColors(padPalette(generated));
     setBaseColor(normalizedBase);
     setAdjustments(INPUT_COLOR_ADJUSTMENTS);
@@ -265,23 +258,26 @@ export function App() {
   };
 
   const restoreHistoryItem = (item: PaletteHistoryItem) => {
-    setSelectedPreset("custom");
     setBaseColor(item.baseHex);
     setColors(padPalette(item.colors));
   };
 
+  const deleteHistoryItem = (item: PaletteHistoryItem) => {
+    const nextHistory = paletteHistory.filter(
+      (entry) => !(entry.baseHex === item.baseHex && entry.createdAt === item.createdAt),
+    );
+    setPaletteHistory(nextHistory);
+    savePaletteHistory(nextHistory);
+  };
+
   const downloadTheme = () => {
     if (!isReady) return;
-    downloadTextFile(safeThemeFilename(selectedPresetName), paletteResult.themeText);
+    downloadTextFile(safeThemeFilename(outputName), paletteResult.themeText);
   };
 
   const downloadNcp = () => {
     if (!isReady) return;
-    downloadTextFile(safeOutputFilename(selectedPresetName, "ncp"), paletteResult.ncpText);
-  };
-
-  const updateAdjustment = (key: keyof Adjustments, value: number) => {
-    setAdjustments((prev) => ({ ...prev, [key]: value }));
+    downloadTextFile(safeOutputFilename(outputName, "ncp"), paletteResult.ncpText);
   };
 
   return (
@@ -421,48 +417,40 @@ export function App() {
                           className="flex items-center justify-between gap-3 rounded-md border border-border bg-card/70 px-2 py-2 text-left transition-colors hover:border-primary/60"
                         >
                           <span className="font-mono text-xs">{item.baseHex}</span>
-                          <span className="flex">
-                            {item.colors.map((color, ci) => (
-                              <span
-                                key={`${item.baseHex}-${color}-${ci}`}
-                                className={`block h-5 w-5 rounded-sm border border-background ${ci > 0 ? "-ml-1" : ""}`}
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
+                          <span className="flex items-center gap-2">
+                            <span className="flex">
+                              {item.colors.map((color, ci) => (
+                                <span
+                                  key={`${item.baseHex}-${color}-${ci}`}
+                                  className={`block h-5 w-5 rounded-sm border border-background ${ci > 0 ? "-ml-1" : ""}`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </span>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Delete history entry ${item.baseHex}`}
+                              className="flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-1 focus:ring-ring"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                deleteHistoryItem(item);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key !== "Enter" && event.key !== " ") return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                deleteHistoryItem(item);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </span>
                           </span>
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
-
-                <div className="grid gap-2">
-                  {PRESET_PALETTES.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      aria-label={preset.name}
-                      aria-pressed={selectedPreset === preset.id}
-                      onClick={() => handlePresetChange(preset.id)}
-                      className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors ${
-                        selectedPreset === preset.id
-                          ? "border-primary/70 bg-primary/10 text-foreground"
-                          : "border-border bg-background/70 text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                      }`}
-                    >
-                      <span>{preset.name}</span>
-                      <span className="flex">
-                        {preset.colors.slice(0, 5).map((color, ci) => (
-                          <span
-                            key={ci}
-                            className={`block h-5 w-5 rounded-sm border border-background ${ci > 0 ? "-ml-1" : ""}`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </span>
-                    </button>
-                  ))}
-                </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   {colors.map((color, index) => (
@@ -518,52 +506,6 @@ export function App() {
                 </div>
               </section>
 
-              <Separator />
-
-              <section className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="theme-eyebrow font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
-                      Global
-                    </p>
-                    <h2 className="text-sm font-semibold">Adjustments</h2>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
-                    aria-label="Reset adjustments to defaults"
-                  >
-                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                    Reset
-                  </Button>
-                </div>
-
-                <div className="grid gap-3">
-                  {ADJUSTMENT_CONFIGS.map(({ key, label, min, max, step }) => (
-                    <div key={key} className="rounded-md border bg-background/70 p-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <label className="text-xs font-medium text-muted-foreground">
-                          {label}
-                        </label>
-                        <span className="font-mono text-xs tabular-nums">
-                          {adjustments[key]}
-                        </span>
-                      </div>
-                      <Slider
-                        min={min}
-                        max={max}
-                        step={step}
-                        value={[adjustments[key]]}
-                        onValueChange={([v]) =>
-                          updateAdjustment(key, v)
-                        }
-                        aria-label={label}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
             </aside>
 
             <section className="preview-stage min-w-0 rounded-lg border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur">
@@ -585,17 +527,19 @@ export function App() {
                       <Download className="mr-2 h-4 w-4" />
                       .ncp
                     </Button>
-                  ) : (
+                  ) : validColorCount > 0 ? (
                     <div className="col-span-2 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
                       <AlertCircle className="h-4 w-4" />
                       <span>{paletteResult.error}</span>
                     </div>
+                  ) : (
+                    <Badge variant="secondary">Preview</Badge>
                   )}
                 </div>
               </div>
 
-              {paletteResult.status === "ready" ? (
-                <FLStudioPreview mapping={paletteResult.mapping} />
+              {previewMapping ? (
+                <FLStudioPreview mapping={previewMapping} />
               ) : (
                 <div className="flex min-h-[420px] items-center justify-center rounded-lg border bg-muted text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
